@@ -1,0 +1,472 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "applicationPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Prefix to use when creating the resources in this deployment.",
+                "name": "Application name prefix"
+            }
+        },
+        "hostingPlanSku": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify the pricing tier for the App Service Plan.",
+                "name": "App Service Plan SKU"
+            },
+            "allowedValues": [
+                "B1",
+                "B2",
+                "B3",
+                "S1",
+                "S2",
+                "S3",
+                "P1v2",
+                "P2v2",
+                "P3v2"
+            ],
+            "defaultValue": "B1"
+        },
+        "logAnalyticsWorkspaceSku": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify the pricing tier for the Log Analytics workspace.",
+                "name": "Log Analytics workspace SKU"
+            },
+            "allowedValues": [
+                "Free",
+                "PerGB2018",
+                "PerNode",
+                "Premium",
+                "Standalone",
+                "Standard"
+            ],
+            "defaultValue": "Free"
+        },
+        "cdnSku": {
+            "type": "object",
+            "metadata": {
+                "description": "Specify the pricing tier for the CDN Profile",
+                "name": "CDN Profile SKU"
+            }
+        },
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify the location to deploy the resources",
+                "name": "Location",
+                "strongType": "location"
+            },
+            "defaultValue": "[resourceGroup().location]"
+        }
+    },
+    "variables": {
+        "webAppName": "[concat(parameters('applicationPrefix'), '-web-', uniqueString(resourceGroup().Id))]",
+        "hostingPlanName": "[concat(parameters('applicationPrefix'), '-asp-', uniqueString(resourceGroup().Id))]",
+
+        "logAnalyticsWorkspaceName": "[concat(parameters('applicationPrefix'), '-la-', uniqueString(resourceGroup().Id))]",
+        "applicationInsightsName": "[concat(parameters('applicationPrefix'), '-ai-', uniqueString(resourceGroup().Id))]",
+
+        "cdnProfileName": "[concat(parameters('applicationPrefix'), '-cdnp-', uniqueString(resourceGroup().Id))]",
+        "cdnEndpointName": "[concat(parameters('applicationPrefix'), '-cdne-', uniqueString(resourceGroup().Id))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "name": "[variables('logAnalyticsWorkspaceName')]",
+            "comments": "Log Analytics workspace",
+            "apiVersion": "2020-08-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "sku": {
+                    "name": "[parameters('logAnalyticsWorkspaceSku')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "name": "[variables('webAppName')]",
+            "comments": "Web App",
+            "apiVersion": "2020-06-01",
+            "location": "[parameters('location')]",
+            "kind": "linux",
+            "dependsOn": [
+                "[variables('logAnalyticsWorkspaceName')]",
+                "[variables('hostingPlanName')]",
+                "[variables('applicationInsightsName')]"
+            ],
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "siteConfig": {
+                    "http20Enabled": true,
+                    "minTlsVersion": "1.2",
+                    "ftpsState": "Disabled",
+                    "appSettings": [
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2018-05-01-preview').InstrumentationKey]"
+                        },
+                        {
+                            "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                            "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2018-05-01-preview').ConnectionString]"
+                        },
+                        {
+                            "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+                            "value": "~2"
+                        },
+                        {
+                            "name": "XDT_MicrosoftApplicationInsights_Mode",
+                            "value": "default"
+                        },
+                        {
+                            "name": "NODE_ENV",
+                            "value": "production"
+                        },
+                        {
+                            "name": "privacy_useUpdateCheck",
+                            "value": "false"
+                        }
+                    ]
+                },
+                "name": "[variables('webAppName')]",
+                "clientAffinityEnabled": false,
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
+                "httpsOnly": true,
+                "enabled": true
+            },
+            "resources": [
+                {
+                    "type": "providers/diagnosticSettings",
+                    "name": "[concat('Microsoft.Insights/', 'AppDiagnostics')]",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('webAppName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "metrics": [
+                            {
+                                "category": "AllMetrics",
+                                "enabled": true
+                            }
+                        ],
+                        "logs": [
+                            {
+                                "category": "AppServiceHTTPLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceConsoleLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceAppLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceFileAuditLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceAuditLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceIPSecAuditLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServicePlatformLogs",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "name": "[variables('hostingPlanName')]",
+            "comments": "App Service Plan",
+            "apiVersion": "2020-06-01",
+            "location": "[parameters('location')]",
+            "kind": "linux",
+            "dependsOn": [
+                "[variables('logAnalyticsWorkspaceName')]"
+            ],
+            "properties": {
+                "name": "[variables('hostingPlanName')]"
+            },
+            "sku": {
+                "name": "[parameters('hostingPlanSku')]"
+            },
+            "resources": [
+                {
+                    "name": "[concat('Microsoft.Insights/', 'HostingPlanDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('hostingPlanName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "metrics": [
+                            {
+                                "category": "AllMetrics",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Insights/components",
+            "name": "[variables('applicationInsightsName')]",
+            "comments": "Application Insights",
+            "apiVersion": "2020-02-02-preview",
+            "location": "[parameters('location')]",
+            "kind": "web",
+            "dependsOn": [
+                "[variables('logAnalyticsWorkspaceName')]"
+            ],
+            "properties": {
+                "ApplicationId": "[variables('webAppName')]",
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]"
+            },
+            "resources": [
+                {
+                    "name": "[concat('Microsoft.Insights/', 'InsightsDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('applicationInsightsName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "metrics": [
+                            {
+                                "category": "Availability",
+                                "enabled": true
+                            },
+                            {
+                                "category": "Browser",
+                                "enabled": true
+                            },
+                            {
+                                "category": "Server",
+                                "enabled": true
+                            },
+                            {
+                                "category": "Failures",
+                                "enabled": true
+                            },
+                            {
+                                "category": "Usage",
+                                "enabled": true
+                            },
+                            {
+                                "category": "Performance counters",
+                                "enabled": true
+                            }
+                        ],
+                        "logs": [
+                            {
+                                "category": "AppAvailabilityResults",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppBrowserTimings",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppEvents",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppMetrics",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppDependencies",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppExceptions",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppPageViews",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppPerformanceCounters",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppRequests",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppSystemEvents",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppTraces",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Cdn/profiles",
+            "name": "[variables('cdnProfileName')]",
+            "comments": "CDN Profile",
+            "apiVersion": "2020-04-15",
+            "location": "[parameters('location')]",
+            "sku": "[parameters('cdnSku')]",
+            "dependsOn": [
+                "[variables('logAnalyticsWorkspaceName')]"
+            ],
+            "properties": {},
+            "resources": [
+                {
+                    "type": "endpoints",
+                    "name": "[variables('cdnEndpointName')]",
+                    "comments": "CDN Endpoint",
+                    "apiVersion": "2020-04-15",
+                    "dependsOn": [
+                        "[variables('cdnProfileName')]",
+                        "[variables('webAppName')]"
+                    ],
+                    "location": "[parameters('location')]",
+                    "properties": {
+                        "isHttpAllowed": false,
+                        "isHttpsAllowed": true,
+                        "originHostHeader": "[reference(variables('webAppName')).hostNames[0]]",
+                        "origins": [
+                            {
+                                "name": "[variables('webAppName')]",
+                                "properties": {
+                                    "hostName": "[reference(variables('webAppName')).hostNames[0]]",
+                                    "httpPort": 80,
+                                    "httpsPort": 443
+                                }
+                            }
+                        ],
+                        "isCompressionEnabled": true,
+                        "contentTypesToCompress": [
+                            "application/eot",
+                            "application/font",
+                            "application/font-sfnt",
+                            "application/javascript",
+                            "application/json",
+                            "application/opentype",
+                            "application/otf",
+                            "application/pkcs7-mime",
+                            "application/truetype",
+                            "application/ttf",
+                            "application/vnd.ms-fontobject",
+                            "application/xhtml+xml",
+                            "application/xml",
+                            "application/xml+rss",
+                            "application/x-font-opentype",
+                            "application/x-font-truetype",
+                            "application/x-font-ttf",
+                            "application/x-httpd-cgi",
+                            "application/x-javascript",
+                            "application/x-mpegurl",
+                            "application/x-opentype",
+                            "application/x-otf",
+                            "application/x-perl",
+                            "application/x-ttf",
+                            "font/eot",
+                            "font/ttf",
+                            "font/otf",
+                            "font/opentype",
+                            "image/svg+xml",
+                            "text/css",
+                            "text/csv",
+                            "text/html",
+                            "text/javascript",
+                            "text/js",
+                            "text/plain",
+                            "text/richtext",
+                            "text/tab-separated-values",
+                            "text/xml",
+                            "text/x-script",
+                            "text/x-component",
+                            "text/x-java-source"
+                        ]
+                    },
+                    "resources": [
+                        {
+                            "type": "providers/diagnosticSettings",
+                            "apiVersion": "2017-05-01-preview",
+                            "name": "[concat('Microsoft.Insights/', 'EndpointDiagnostics')]",
+                            "location": "[parameters('location')]",
+                            "dependsOn": [
+                                "[variables('cdnEndpointName')]"
+                            ],
+                            "properties": {
+                                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                                "logs": [
+                                    {
+                                        "category": "CoreAnalytics",
+                                        "enabled": true
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "providers/diagnosticSettings",
+                    "name": "[concat('Microsoft.Insights/', 'ProfileDiagnostics')]",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('cdnProfileName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "logs": [
+                            {
+                                "category": "AzureCdnAccessLog",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ],
+
+    "outputs": {
+        "webAppName": {
+            "type": "string",
+            "value": "[reference(variables('webAppName')).name]"
+        },
+        "webAppPrincipalId": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Web/sites', variables('webAppName')), '2020-06-01', 'full').identity.principalId]"
+        },
+        "cdnEndpointOrigin": {
+            "type": "string",
+            "value": "[reference(variables('cdnEndpointName')).hostName]"
+        },
+        "cdnEndpointHostName": {
+            "type": "string",
+            "value": "[reference(variables('cdnEndpointName')).originHostHeader]"
+        }
+    }
+}
