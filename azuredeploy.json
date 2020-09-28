@@ -59,6 +59,13 @@
                 "strongType": "location"
             },
             "defaultValue": "[resourceGroup().location]"
+        },
+        "dockerImageName": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify the Docker image including its tag for the Web App.",
+                "name": "Docker Image Name"
+            }
         }
     },
     "variables": {
@@ -90,7 +97,7 @@
             "comments": "Web App",
             "apiVersion": "2020-06-01",
             "location": "[parameters('location')]",
-            "kind": "linux",
+            "kind": "app,linux,container",
             "dependsOn": [
                 "[variables('logAnalyticsWorkspaceName')]",
                 "[variables('hostingPlanName')]",
@@ -104,6 +111,8 @@
                     "http20Enabled": true,
                     "minTlsVersion": "1.2",
                     "ftpsState": "Disabled",
+                    "linuxFxVersion": "[concat('DOCKER|', parameters('dockerImageName'))]",
+                    "alwaysOn": true,
                     "appSettings": [
                         {
                             "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
@@ -135,7 +144,8 @@
                 "clientAffinityEnabled": false,
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
                 "httpsOnly": true,
-                "enabled": true
+                "enabled": true,
+                "reserved": true
             },
             "resources": [
                 {
@@ -199,7 +209,8 @@
                 "[variables('logAnalyticsWorkspaceName')]"
             ],
             "properties": {
-                "name": "[variables('hostingPlanName')]"
+                "name": "[variables('hostingPlanName')]",
+                "reserved": true
             },
             "sku": {
                 "name": "[parameters('hostingPlanSku')]"

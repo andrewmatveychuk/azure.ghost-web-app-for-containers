@@ -15,6 +15,9 @@
             "value": {
                 "name": "Standard_Microsoft"
             }
+        },
+        "dockerImageName": {
+            "value": "andrewmatveychuk/ghost-ai:latest"
         }
     }
 }
