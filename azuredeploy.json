@@ -80,10 +80,10 @@
     },
     "resources": [
         {
-            "type": "Microsoft.OperationalInsights/workspaces",
             "name": "[variables('logAnalyticsWorkspaceName')]",
-            "comments": "Log Analytics workspace",
+            "type": "Microsoft.OperationalInsights/workspaces",
             "apiVersion": "2020-08-01",
+            "comments": "Log Analytics workspace",
             "location": "[parameters('location')]",
             "properties": {
                 "sku": {
@@ -92,10 +92,10 @@
             }
         },
         {
-            "type": "Microsoft.Web/sites",
             "name": "[variables('webAppName')]",
-            "comments": "Web App",
+            "type": "Microsoft.Web/sites",
             "apiVersion": "2020-06-01",
+            "comments": "Web App",
             "location": "[parameters('location')]",
             "kind": "app,linux,container",
             "dependsOn": [
@@ -149,8 +149,8 @@
             },
             "resources": [
                 {
-                    "type": "providers/diagnosticSettings",
                     "name": "[concat('Microsoft.Insights/', 'AppDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
                     "apiVersion": "2017-05-01-preview",
                     "location": "[parameters('location')]",
                     "dependsOn": [
@@ -199,10 +199,10 @@
             ]
         },
         {
-            "type": "Microsoft.Web/serverfarms",
             "name": "[variables('hostingPlanName')]",
-            "comments": "App Service Plan",
+            "type": "Microsoft.Web/serverfarms",
             "apiVersion": "2020-06-01",
+            "comments": "App Service Plan",
             "location": "[parameters('location')]",
             "kind": "linux",
             "dependsOn": [
@@ -237,10 +237,10 @@
             ]
         },
         {
-            "type": "Microsoft.Insights/components",
             "name": "[variables('applicationInsightsName')]",
-            "comments": "Application Insights",
+            "type": "Microsoft.Insights/components",
             "apiVersion": "2020-02-02-preview",
+            "comments": "Application Insights",
             "location": "[parameters('location')]",
             "kind": "web",
             "dependsOn": [
@@ -339,10 +339,10 @@
             ]
         },
         {
-            "type": "Microsoft.Cdn/profiles",
             "name": "[variables('cdnProfileName')]",
-            "comments": "CDN Profile",
+            "type": "Microsoft.Cdn/profiles",
             "apiVersion": "2020-04-15",
+            "comments": "CDN Profile",
             "location": "[parameters('location')]",
             "sku": "[parameters('cdnSku')]",
             "dependsOn": [
@@ -351,10 +351,10 @@
             "properties": {},
             "resources": [
                 {
-                    "type": "endpoints",
                     "name": "[variables('cdnEndpointName')]",
-                    "comments": "CDN Endpoint",
+                    "type": "endpoints",
                     "apiVersion": "2020-04-15",
+                    "comments": "CDN Endpoint",
                     "dependsOn": [
                         "[variables('cdnProfileName')]",
                         "[variables('webAppName')]"
@@ -421,9 +421,9 @@
                     },
                     "resources": [
                         {
+                            "name": "[concat('Microsoft.Insights/', 'EndpointDiagnostics')]",
                             "type": "providers/diagnosticSettings",
                             "apiVersion": "2017-05-01-preview",
-                            "name": "[concat('Microsoft.Insights/', 'EndpointDiagnostics')]",
                             "location": "[parameters('location')]",
                             "dependsOn": [
                                 "[variables('cdnEndpointName')]"
@@ -441,8 +441,8 @@
                     ]
                 },
                 {
-                    "type": "providers/diagnosticSettings",
                     "name": "[concat('Microsoft.Insights/', 'ProfileDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
                     "apiVersion": "2017-05-01-preview",
                     "location": "[parameters('location')]",
                     "dependsOn": [
