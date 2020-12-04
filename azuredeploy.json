@@ -116,11 +116,11 @@
                     "appSettings": [
                         {
                             "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
-                            "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2018-05-01-preview').InstrumentationKey]"
+                            "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2020-02-02-preview').InstrumentationKey]"
                         },
                         {
                             "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                            "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2018-05-01-preview').ConnectionString]"
+                            "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2020-02-02-preview').ConnectionString]"
                         },
                         {
                             "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
@@ -131,12 +131,26 @@
                             "value": "default"
                         },
                         {
+                            "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+                            "value": "true"
+                        },
+
+                        // Ghost specific configuration settings
+                        {
                             "name": "NODE_ENV",
                             "value": "production"
                         },
                         {
+                            "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                            "value": "~12"
+                        },
+                        {
                             "name": "privacy_useUpdateCheck",
                             "value": "false"
+                        },
+                        {
+                            "name": "url",
+                            "value": "[concat('https://', variables('webAppName'), '.azurewebsites.net')]"
                         }
                     ]
                 },
