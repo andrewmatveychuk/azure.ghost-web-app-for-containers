@@ -52,7 +52,9 @@
                 "description": "Specify the pricing tier for the CDN Profile",
                 "name": "CDN Profile SKU"
             },
-            "defaultValue": "Standard_Microsoft"
+            "defaultValue": {
+                "name": "Standard_Microsoft"
+            }
         },
         "location": {
             "type": "string",
