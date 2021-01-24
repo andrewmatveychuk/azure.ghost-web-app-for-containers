@@ -303,29 +303,10 @@
                         "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
                         "metrics": [
                             {
-                                "category": "Availability",
-                                "enabled": true
-                            },
-                            {
-                                "category": "Browser",
-                                "enabled": true
-                            },
-                            {
-                                "category": "Server",
-                                "enabled": true
-                            },
-                            {
-                                "category": "Failures",
-                                "enabled": true
-                            },
-                            {
-                                "category": "Usage",
-                                "enabled": true
-                            },
-                            {
-                                "category": "Performance counters",
+                                "category": "AllMetrics",
                                 "enabled": true
                             }
+
                         ],
                         "logs": [
                             {
