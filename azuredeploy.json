@@ -270,6 +270,10 @@
                             {
                                 "category": "AppServicePlatformLogs",
                                 "enabled": true
+                            },
+                            {
+                                "category": "AppServiceAntivirusScanAuditLogs",
+                                "enabled": true
                             }
                         ]
                     }
@@ -512,6 +516,12 @@
                         "metrics": [
                             {
                                 "category": "AllMetrics",
+                                "enabled": true
+                            }
+                        ],
+                        "logs": [
+                            {
+                                "category": "AzureCdnAccessLog",
                                 "enabled": true
                             }
                         ]
