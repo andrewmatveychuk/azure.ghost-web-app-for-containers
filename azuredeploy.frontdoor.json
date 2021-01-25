@@ -1,0 +1,569 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "applicationPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Prefix to use when creating the resources in this deployment.",
+                "name": "Application name prefix"
+            },
+            "defaultValue": "ghost"
+        },
+        "hostingPlanSku": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify the pricing tier for the App Service Plan.",
+                "name": "App Service Plan SKU"
+            },
+            "allowedValues": [
+                "B1",
+                "B2",
+                "B3",
+                "S1",
+                "S2",
+                "S3",
+                "P1v2",
+                "P2v2",
+                "P3v2"
+            ],
+            "defaultValue": "B1"
+        },
+        "logAnalyticsWorkspaceSku": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify the pricing tier for the Log Analytics workspace.",
+                "name": "Log Analytics workspace SKU"
+            },
+            "allowedValues": [
+                "Free",
+                "PerGB2018",
+                "PerNode",
+                "Premium",
+                "Standalone",
+                "Standard"
+            ],
+            "defaultValue": "Free"
+        },
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify the location to deploy the resources",
+                "name": "Location",
+                "strongType": "location"
+            },
+            "defaultValue": "[resourceGroup().location]"
+        },
+        "databasePassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Enter password.",
+                "name": "MySQL Server Password"
+            }
+        }
+    },
+    "variables": {
+        "webAppName": "[concat(parameters('applicationPrefix'), '-web-', uniqueString(resourceGroup().Id))]",
+        "hostingPlanName": "[concat(parameters('applicationPrefix'), '-asp-', uniqueString(resourceGroup().Id))]",
+
+        "logAnalyticsWorkspaceName": "[concat(parameters('applicationPrefix'), '-la-', uniqueString(resourceGroup().Id))]",
+        "applicationInsightsName": "[concat(parameters('applicationPrefix'), '-ai-', uniqueString(resourceGroup().Id))]",
+
+        "keyVaultName": "[concat(parameters('applicationPrefix'), '-kv-', uniqueString(resourceGroup().Id))]",
+        "databasePasswordResourceId": "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'databasePassword')]",
+
+        "frontDoorName": "[concat(parameters('applicationPrefix'), '-fd-', uniqueString(resourceGroup().Id))]",
+        "wafPolicyName": "[concat(parameters('applicationPrefix'), 'waf', uniqueString(resourceGroup().Id))]"
+    },
+    "resources": [
+        {
+            "name": "[variables('logAnalyticsWorkspaceName')]",
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "2020-08-01",
+            "comments": "Log Analytics workspace",
+            "location": "[parameters('location')]",
+            "properties": {
+                "sku": {
+                    "name": "[parameters('logAnalyticsWorkspaceSku')]"
+                }
+            }
+        },
+        {
+            "name": "[variables('keyVaultName')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2019-09-01",
+            "dependsOn": [
+                "[variables('webAppName')]"
+            ],
+            "location": "[parameters('location')]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('webAppName')),'2019-08-01', 'full').identity.principalId]",
+                        "permissions": {
+                            "secrets": [
+                                "Get"
+                            ]
+                        }
+                    }
+                ],
+                "sku": {
+                    "name": "standard",
+                    "family": "A"
+                }
+            },
+            "resources": [
+                {
+                    "name": "databasePassword",
+                    "type": "secrets",
+                    "apiVersion": "2019-09-01",
+                    "dependsOn": [
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "value": "[parameters('databasePassword')]"
+                    }
+                },
+                {
+                    "name": "[concat('Microsoft.Insights/', 'KeyVaultDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "metrics": [
+                            {
+                                "category": "AllMetrics",
+                                "enabled": true
+                            }
+                        ],
+                        "logs": [
+                            {
+                                "category": "AuditEvent",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "[variables('webAppName')]",
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2020-09-01",
+            "comments": "Web App",
+            "location": "[parameters('location')]",
+            "kind": "app,linux,container",
+            "dependsOn": [
+                "[variables('logAnalyticsWorkspaceName')]",
+                "[variables('hostingPlanName')]",
+                "[variables('applicationInsightsName')]"
+            ],
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "name": "[variables('webAppName')]",
+                "clientAffinityEnabled": false,
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
+                "httpsOnly": true,
+                "enabled": true,
+                "reserved": true,
+                "siteConfig": {
+                    "http20Enabled": true,
+                    "httpLoggingEnabled": true,
+                    "minTlsVersion": "1.2",
+                    "ftpsState": "Disabled",
+                    "linuxFxVersion": "COMPOSE|dmVyc2lvbjogJzMuOCcKCnNlcnZpY2VzOgogICBkYjoKICAgIGltYWdlOiBteXNxbDo1LjcKICAgIHZvbHVtZXM6CiAgICAgICMgU2VlIGh0dHBzOi8vZG9jcy5taWNyb3NvZnQuY29tL2VuLXVzL2F6dXJlL2FwcC1zZXJ2aWNlL2NvbmZpZ3VyZS1jdXN0b20tY29udGFpbmVyP3Bpdm90cz1jb250YWluZXItbGludXgjY29uZmlndXJlLW11bHRpLWNvbnRhaW5lci1hcHBzCiAgICAgIC0gJHtXRUJBUFBfU1RPUkFHRV9IT01FfS9zaXRlL3d3d3Jvb3QvbXlzcWw6L3Zhci9saWIvbXlzcWwKICAgIHJlc3RhcnQ6IGFsd2F5cwogICAgZW52aXJvbm1lbnQ6CiAgICAgIE1ZU1FMX1JPT1RfSE9TVDogIiUiCiAgICAgICMgRmV0Y2hpbmcgdGhlIHBhc3N3b3JkIGZyb20gdGhlIGFwcGxpY2F0aW9uIHNldHRpbmdzCiAgICAgIE1ZU1FMX1JPT1RfUEFTU1dPUkQ6ICR7REFUQUJBU0VfUEFTU1dPUkR9CgogICBnaG9zdDoKICAgIGltYWdlOiBhbmRyZXdtYXR2ZXljaHVrL2dob3N0LWFpOmxhdGVzdAogICAgZGVwZW5kc19vbjoKICAgICAgLSBkYgogICAgdm9sdW1lczoKICAgICAgLSAke1dFQkFQUF9TVE9SQUdFX0hPTUV9L3NpdGUvd3d3cm9vdC9jb250ZW50X2ZpbGVzOi92YXIvbGliL2dob3N0L2NvbnRlbnRfZmlsZXMKICAgIHJlc3RhcnQ6IGFsd2F5cwogICAgcG9ydHM6CiAgICAgIC0gODA6MjM2OAogICAgZW52aXJvbm1lbnQ6CiAgICAgICMgU2VlIGh0dHBzOi8vZG9jcy5naG9zdC5vcmcvZG9jcy9jb25maWcjc2VjdGlvbi1ydW5uaW5nLWdob3N0LXdpdGgtY29uZmlnLWVudi12YXJpYWJsZXMKICAgICAgZGF0YWJhc2VfX2NsaWVudDogbXlzcWwKICAgICAgZGF0YWJhc2VfX2Nvbm5lY3Rpb25fX2hvc3Q6IGRiCiAgICAgIGRhdGFiYXNlX19jb25uZWN0aW9uX191c2VyOiByb290CiAgICAgIGRhdGFiYXNlX19jb25uZWN0aW9uX19wYXNzd29yZDogJHtEQVRBQkFTRV9QQVNTV09SRH0KICAgICAgZGF0YWJhc2VfX2Nvbm5lY3Rpb25fX2RhdGFiYXNlOiBnaG9zdA==",
+                    "alwaysOn": true,
+                    "use32BitWorkerProcess": false,
+                    "ipSecurityRestrictions": [
+                        {
+                            "ipAddress": "AzureFrontDoor.Backend",
+                            "action": "Allow",
+                            "tag": "ServiceTag",
+                            "priority": 300,
+                            "name": "Access from Azure Front Door",
+                            "description": "Rule for access from Azure Front Door"
+                        }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    // Creating the app setting as a nested resource to resolve its dependency on the key vault
+                    "type": "config",
+                    "apiVersion": "2020-09-01",
+                    "location": "[parameters('location')]",
+                    "name": "appsettings",
+                    "dependsOn": [
+                        "[variables('webAppName')]",
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2020-02-02-preview').InstrumentationKey]",
+                        "APPLICATIONINSIGHTS_CONNECTION_STRING": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2020-02-02-preview').ConnectionString]",
+                        "ApplicationInsightsAgent_EXTENSION_VERSION": "~2",
+                        "XDT_MicrosoftApplicationInsights_Mode": "default",
+
+                        // Ghost-specific configuration settings
+                        "NODE_ENV": "production",
+                        "GHOST_CONTENT": "/var/lib/ghost/content_files/",
+                        "paths__contentPath": "/var/lib/ghost/content_files/",
+                        "privacy_useUpdateCheck": "false",
+                        "url": "[concat('https://', variables('frontDoorName'), '.azurefd.net')]", //Using Azure Front Door suffix for creating the URL. Specify your custom domain name if using one.
+
+                        // Container-specific configuration settings
+                        "WEBSITES_ENABLE_APP_SERVICE_STORAGE": "true",
+                        "WEBSITES_CONTAINER_START_TIME_LIMIT": 460, // The containers need more time to warm up, especially during the first start when the MySQL container initializing its database
+                        "WEBSITES_WEB_CONTAINER_NAME": "ghost",
+                        "DATABASE_PASSWORD": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('databasePasswordResourceId')).secretUriWithVersion, ')')]" //Resolving the database password from the key vault secret
+                    }
+                },
+                {
+                    "name": "[concat('Microsoft.Insights/', 'AppDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('webAppName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "metrics": [
+                            {
+                                "category": "AllMetrics",
+                                "enabled": true
+                            }
+                        ],
+                        "logs": [
+                            {
+                                "category": "AppServiceHTTPLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceConsoleLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceAppLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceFileAuditLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceAuditLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceIPSecAuditLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServicePlatformLogs",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppServiceAntivirusScanAuditLogs",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "[variables('hostingPlanName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2020-06-01",
+            "comments": "App Service Plan",
+            "location": "[parameters('location')]",
+            "kind": "linux",
+            "dependsOn": [
+                "[variables('logAnalyticsWorkspaceName')]"
+            ],
+            "properties": {
+                "name": "[variables('hostingPlanName')]",
+                "reserved": true
+            },
+            "sku": {
+                "name": "[parameters('hostingPlanSku')]"
+            },
+            "resources": [
+                {
+                    "name": "[concat('Microsoft.Insights/', 'HostingPlanDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('hostingPlanName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "metrics": [
+                            {
+                                "category": "AllMetrics",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "[variables('applicationInsightsName')]",
+            "type": "Microsoft.Insights/components",
+            "apiVersion": "2020-02-02-preview",
+            "comments": "Application Insights",
+            "location": "[parameters('location')]",
+            "kind": "web",
+            "dependsOn": [
+                "[variables('logAnalyticsWorkspaceName')]"
+            ],
+            "properties": {
+                "ApplicationId": "[variables('webAppName')]",
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]"
+            },
+            "resources": [
+                {
+                    "name": "[concat('Microsoft.Insights/', 'InsightsDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('applicationInsightsName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "metrics": [
+                            {
+                                "category": "AllMetrics",
+                                "enabled": true
+                            }
+
+                        ],
+                        "logs": [
+                            {
+                                "category": "AppAvailabilityResults",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppBrowserTimings",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppEvents",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppMetrics",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppDependencies",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppExceptions",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppPageViews",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppPerformanceCounters",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppRequests",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppSystemEvents",
+                                "enabled": true
+                            },
+                            {
+                                "category": "AppTraces",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Network/frontDoors",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('frontDoorName')]",
+            "location": "global",
+            "dependsOn": [
+                "[variables('webAppName')]",
+                "[variables('logAnalyticsWorkspaceName')]",
+                "[variables('wafPolicyName')]"
+            ],
+            "properties": {
+                "routingRules": [
+                    {
+                        "name": "routingRule1",
+                        "properties": {
+                            "frontendEndpoints": [
+                                {
+                                    "id": "[resourceId('Microsoft.Network/frontDoors/frontendEndpoints', variables('frontDoorName'), 'frontendEndpoint1')]"
+                                }
+                            ],
+                            "acceptedProtocols": [
+                                "Http",
+                                "Https"
+                            ],
+                            "patternsToMatch": [
+                                "/*"
+                            ],
+                            "routeConfiguration": {
+                                "@odata.type": "#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration",
+                                "forwardingProtocol": "HttpsOnly",
+                                "backendPool": {
+                                    "id": "[resourceId('Microsoft.Network/frontDoors/backendPools', variables('frontDoorName'), 'backendPool1')]"
+                                },
+                                "cacheConfiguration": {
+                                    "queryParameterStripDirective": "StripNone",
+                                    "dynamicCompression": "Enabled"
+                                }
+                            },
+                            "enabledState": "Enabled"
+                        }
+                    }
+                ],
+                "healthProbeSettings": [
+                    {
+                        "name": "healthProbeSettings1",
+                        "properties": {
+                            "path": "/",
+                            "protocol": "Https",
+                            "intervalInSeconds": 120
+                        }
+                    }
+                ],
+                "loadBalancingSettings": [
+                    {
+                        "name": "loadBalancingSettings1",
+                        "properties": {
+                            "sampleSize": 4,
+                            "successfulSamplesRequired": 2
+                        }
+                    }
+                ],
+                "backendPools": [
+                    {
+                        "name": "backendPool1",
+                        "properties": {
+                            "backends": [
+                                {
+                                    "address": "[reference(variables('webAppName')).defaultHostName]",
+                                    "backendHostHeader": "[reference(variables('webAppName')).defaultHostName]",
+                                    "httpPort": 80,
+                                    "httpsPort": 443,
+                                    "weight": 50,
+                                    "priority": 1,
+                                    "enabledState": "Enabled"
+                                }
+                            ],
+                            "loadBalancingSettings": {
+                                "id": "[resourceId('Microsoft.Network/frontDoors/loadBalancingSettings', variables('frontDoorName'), 'loadBalancingSettings1')]"
+                            },
+                            "healthProbeSettings": {
+                                "id": "[resourceId('Microsoft.Network/frontDoors/healthProbeSettings', variables('frontDoorName'), 'healthProbeSettings1')]"
+                            }
+                        }
+                    }
+                ],
+                "frontendEndpoints": [
+                    {
+                        "name": "frontendEndpoint1",
+                        "properties": {
+                            "hostName": "[concat(variables('frontDoorName'), '.azurefd.net')]",
+                            "sessionAffinityEnabledState": "Disabled",
+                            "webApplicationFirewallPolicyLink": {
+                                "id": "[resourceId('Microsoft.Network/frontdoorWebApplicationFirewallPolicies', variables('wafPolicyName'))]"
+                            }
+                        }
+                    }
+                ],
+                "enabledState": "Enabled"
+            },
+            "resources": [
+                {
+                    "name": "[concat('Microsoft.Insights/', 'FrontDoorDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('frontDoorName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "metrics": [
+                            {
+                                "category": "AllMetrics",
+                                "enabled": true
+                            }
+                        ],
+                        "logs": [
+                            {
+                                "category": "FrontdoorAccessLog",
+                                "enabled": true
+                            },
+                            {
+                                "category": "FrontdoorWebApplicationFirewallLog",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "apiVersion": "2020-04-01",
+            "type": "Microsoft.Network/FrontDoorWebApplicationFirewallPolicies",
+            "name": "[variables('wafPolicyName')]",
+            "location": "global",
+            "properties": {
+                "policySettings": {
+                    "mode": "Prevention",
+                    "enabledState": "Enabled"
+                },
+                "managedRules": {
+                    "managedRuleSets": [
+                        {
+                            "ruleSetType": "DefaultRuleSet",
+                            "ruleSetVersion": "1.0"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+
+    "outputs": {
+        "webAppHostName": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Web/sites', variables('webAppName')), '2020-09-01').defaultHostName]"
+        },
+        "webAppPrincipalId": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Web/sites', variables('webAppName')), '2020-09-01', 'full').identity.principalId]"
+        },
+        "frontDoorHostName": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/frontDoors', variables('frontDoorName')), '2020-05-01').frontendEndpoints[0].properties.hostName]"
+        }
+    }
+}
