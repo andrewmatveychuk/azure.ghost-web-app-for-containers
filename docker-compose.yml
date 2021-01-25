@@ -8,6 +8,7 @@ services:
       - ${WEBAPP_STORAGE_HOME}/site/wwwroot/mysql:/var/lib/mysql
     restart: always
     environment:
+      MYSQL_ROOT_HOST: "%"
       # Fetching the password from the application settings
       MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
 

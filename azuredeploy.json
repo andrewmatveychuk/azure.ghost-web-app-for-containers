@@ -80,6 +80,9 @@
         "logAnalyticsWorkspaceName": "[concat(parameters('applicationPrefix'), '-la-', uniqueString(resourceGroup().Id))]",
         "applicationInsightsName": "[concat(parameters('applicationPrefix'), '-ai-', uniqueString(resourceGroup().Id))]",
 
+        "keyVaultName": "[concat(parameters('applicationPrefix'), '-kv-', uniqueString(resourceGroup().Id))]",
+        "databasePasswordResourceId": "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'databasePassword')]",
+
         "cdnProfileName": "[concat(parameters('applicationPrefix'), '-cdnp-', uniqueString(resourceGroup().Id))]",
         "cdnEndpointName": "[concat(parameters('applicationPrefix'), '-cdne-', uniqueString(resourceGroup().Id))]"
     },
@@ -97,9 +100,73 @@
             }
         },
         {
+            "name": "[variables('keyVaultName')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2019-09-01",
+            "dependsOn": [
+                "[variables('webAppName')]"
+            ],
+            "location": "[parameters('location')]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('webAppName')),'2019-08-01', 'full').identity.principalId]",
+                        "permissions": {
+                            "secrets": [
+                                "Get"
+                            ]
+                        }
+                    }
+                ],
+                "sku": {
+                    "name": "standard",
+                    "family": "A"
+                }
+            },
+            "resources": [
+                {
+                    "name": "databasePassword",
+                    "type": "secrets",
+                    "apiVersion": "2019-09-01",
+                    "dependsOn": [
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "value": "[parameters('databasePassword')]"
+                    }
+                },
+                {
+                    "name": "[concat('Microsoft.Insights/', 'KeyVaultDiagnostics')]",
+                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsWorkspaceName'))]",
+                        "metrics": [
+                            {
+                                "category": "AllMetrics",
+                                "enabled": true
+                            }
+                        ],
+                        "logs": [
+                            {
+                                "category": "AuditEvent",
+                                "enabled": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
             "name": "[variables('webAppName')]",
             "type": "Microsoft.Web/sites",
-            "apiVersion": "2020-06-01",
+            "apiVersion": "2020-09-01",
             "comments": "Web App",
             "location": "[parameters('location')]",
             "kind": "app,linux,container",
@@ -112,81 +179,53 @@
                 "type": "SystemAssigned"
             },
             "properties": {
-                "siteConfig": {
-                    "http20Enabled": true,
-                    "httpLoggingEnabled": true,
-                    "minTlsVersion": "1.2",
-                    "ftpsState": "Disabled",
-                    "linuxFxVersion": "COMPOSE|dmVyc2lvbjogJzMuOCcNCg0Kc2VydmljZXM6DQogICBkYjoNCiAgICBpbWFnZTogbXlzcWw6NS43DQogICAgdm9sdW1lczoNCiAgICAgICMgU2VlIGh0dHBzOi8vZG9jcy5taWNyb3NvZnQuY29tL2VuLXVzL2F6dXJlL2FwcC1zZXJ2aWNlL2NvbmZpZ3VyZS1jdXN0b20tY29udGFpbmVyP3Bpdm90cz1jb250YWluZXItbGludXgjY29uZmlndXJlLW11bHRpLWNvbnRhaW5lci1hcHBzDQogICAgICAtICR7V0VCQVBQX1NUT1JBR0VfSE9NRX0vc2l0ZS93d3dyb290L215c3FsOi92YXIvbGliL215c3FsDQogICAgcmVzdGFydDogYWx3YXlzDQogICAgZW52aXJvbm1lbnQ6DQogICAgICAjIEZldGNoaW5nIHRoZSBwYXNzd29yZCBmcm9tIHRoZSBhcHBsaWNhdGlvbiBzZXR0aW5ncw0KICAgICAgTVlTUUxfUk9PVF9QQVNTV09SRDogJHtEQVRBQkFTRV9QQVNTV09SRH0NCg0KICAgZ2hvc3Q6DQogICAgaW1hZ2U6IGFuZHJld21hdHZleWNodWsvZ2hvc3QtYWk6bGF0ZXN0DQogICAgZGVwZW5kc19vbjoNCiAgICAgIC0gZGINCiAgICB2b2x1bWVzOg0KICAgICAgLSAke1dFQkFQUF9TVE9SQUdFX0hPTUV9L3NpdGUvd3d3cm9vdC9jb250ZW50X2ZpbGVzOi92YXIvbGliL2dob3N0L2NvbnRlbnRfZmlsZXMNCiAgICByZXN0YXJ0OiBhbHdheXMNCiAgICBwb3J0czoNCiAgICAgIC0gODA6MjM2OA0KICAgIGVudmlyb25tZW50Og0KICAgICAgIyBTZWUgaHR0cHM6Ly9kb2NzLmdob3N0Lm9yZy9kb2NzL2NvbmZpZyNzZWN0aW9uLXJ1bm5pbmctZ2hvc3Qtd2l0aC1jb25maWctZW52LXZhcmlhYmxlcw0KICAgICAgZGF0YWJhc2VfX2NsaWVudDogbXlzcWwNCiAgICAgIGRhdGFiYXNlX19jb25uZWN0aW9uX19ob3N0OiBkYg0KICAgICAgZGF0YWJhc2VfX2Nvbm5lY3Rpb25fX3VzZXI6IHJvb3QNCiAgICAgIGRhdGFiYXNlX19jb25uZWN0aW9uX19wYXNzd29yZDogJHtEQVRBQkFTRV9QQVNTV09SRH0NCiAgICAgIGRhdGFiYXNlX19jb25uZWN0aW9uX19kYXRhYmFzZTogZ2hvc3Q=",
-                    "alwaysOn": true,
-                    "use32BitWorkerProcess": false,
-                    "appSettings": [
-                        {
-                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
-                            "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2020-02-02-preview').InstrumentationKey]"
-                        },
-                        {
-                            "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                            "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2020-02-02-preview').ConnectionString]"
-                        },
-                        {
-                            "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
-                            "value": "~2"
-                        },
-                        {
-                            "name": "XDT_MicrosoftApplicationInsights_Mode",
-                            "value": "default"
-                        },
-
-                        // Ghost-specific configuration settings
-                        {
-                            "name": "NODE_ENV",
-                            "value": "production"
-                        },
-                        {
-                            "name": "GHOST_CONTENT",
-                            "value": "/var/lib/ghost/content_files/"
-                        },
-                        {
-                            "name": "paths__contentPath",
-                            "value": "/var/lib/ghost/content_files/"
-                        },
-                        {
-                            "name": "privacy_useUpdateCheck",
-                            "value": "false"
-                        },
-                        {
-                            "name": "url",
-                            "value": "[concat('https://', variables('cdnEndpointName'), '.azureedge.net')]" //Using Azure CDN suffix for creating the URL. Specify your custom domain name if using one with Azure CDN.
-                        },
-
-                        // Container-specific configuration settings
-                        {
-                            "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
-                            "value": "true"
-                        },
-                        {
-                            "name": "WEBSITES_CONTAINER_START_TIME_LIMIT",
-                            "value": 460
-                        },
-                        {
-                            "name": "WEBSITES_WEB_CONTAINER_NAME",
-                            "value": "ghost"
-                        },
-                        {
-                            "name": "DATABASE_PASSWORD",
-                            "value": "[parameters('databasePassword')]"
-                        }
-                    ]
-                },
                 "name": "[variables('webAppName')]",
                 "clientAffinityEnabled": false,
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
                 "httpsOnly": true,
                 "enabled": true,
-                "reserved": true
+                "reserved": true,
+                "siteConfig": {
+                    "http20Enabled": true,
+                    "httpLoggingEnabled": true,
+                    "minTlsVersion": "1.2",
+                    "ftpsState": "Disabled",
+                    "linuxFxVersion": "COMPOSE|dmVyc2lvbjogJzMuOCcKCnNlcnZpY2VzOgogICBkYjoKICAgIGltYWdlOiBteXNxbDo1LjcKICAgIHZvbHVtZXM6CiAgICAgICMgU2VlIGh0dHBzOi8vZG9jcy5taWNyb3NvZnQuY29tL2VuLXVzL2F6dXJlL2FwcC1zZXJ2aWNlL2NvbmZpZ3VyZS1jdXN0b20tY29udGFpbmVyP3Bpdm90cz1jb250YWluZXItbGludXgjY29uZmlndXJlLW11bHRpLWNvbnRhaW5lci1hcHBzCiAgICAgIC0gJHtXRUJBUFBfU1RPUkFHRV9IT01FfS9zaXRlL3d3d3Jvb3QvbXlzcWw6L3Zhci9saWIvbXlzcWwKICAgIHJlc3RhcnQ6IGFsd2F5cwogICAgZW52aXJvbm1lbnQ6CiAgICAgIE1ZU1FMX1JPT1RfSE9TVDogIiUiCiAgICAgICMgRmV0Y2hpbmcgdGhlIHBhc3N3b3JkIGZyb20gdGhlIGFwcGxpY2F0aW9uIHNldHRpbmdzCiAgICAgIE1ZU1FMX1JPT1RfUEFTU1dPUkQ6ICR7REFUQUJBU0VfUEFTU1dPUkR9CgogICBnaG9zdDoKICAgIGltYWdlOiBhbmRyZXdtYXR2ZXljaHVrL2dob3N0LWFpOmxhdGVzdAogICAgZGVwZW5kc19vbjoKICAgICAgLSBkYgogICAgdm9sdW1lczoKICAgICAgLSAke1dFQkFQUF9TVE9SQUdFX0hPTUV9L3NpdGUvd3d3cm9vdC9jb250ZW50X2ZpbGVzOi92YXIvbGliL2dob3N0L2NvbnRlbnRfZmlsZXMKICAgIHJlc3RhcnQ6IGFsd2F5cwogICAgcG9ydHM6CiAgICAgIC0gODA6MjM2OAogICAgZW52aXJvbm1lbnQ6CiAgICAgICMgU2VlIGh0dHBzOi8vZG9jcy5naG9zdC5vcmcvZG9jcy9jb25maWcjc2VjdGlvbi1ydW5uaW5nLWdob3N0LXdpdGgtY29uZmlnLWVudi12YXJpYWJsZXMKICAgICAgZGF0YWJhc2VfX2NsaWVudDogbXlzcWwKICAgICAgZGF0YWJhc2VfX2Nvbm5lY3Rpb25fX2hvc3Q6IGRiCiAgICAgIGRhdGFiYXNlX19jb25uZWN0aW9uX191c2VyOiByb290CiAgICAgIGRhdGFiYXNlX19jb25uZWN0aW9uX19wYXNzd29yZDogJHtEQVRBQkFTRV9QQVNTV09SRH0KICAgICAgZGF0YWJhc2VfX2Nvbm5lY3Rpb25fX2RhdGFiYXNlOiBnaG9zdA==",
+                    "alwaysOn": true,
+                    "use32BitWorkerProcess": false
+                }
             },
             "resources": [
+                {
+                    // Creating the app setting as a nested resource to resolve its dependency on the key vault
+                    "type": "config",
+                    "apiVersion": "2020-09-01",
+                    "location": "[parameters('location')]",
+                    "name": "appsettings",
+                    "dependsOn": [
+                        "[variables('webAppName')]",
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2020-02-02-preview').InstrumentationKey]",
+                        "APPLICATIONINSIGHTS_CONNECTION_STRING": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2020-02-02-preview').ConnectionString]",
+                        "ApplicationInsightsAgent_EXTENSION_VERSION": "~2",
+                        "XDT_MicrosoftApplicationInsights_Mode": "default",
+
+                        // Ghost-specific configuration settings
+                        "NODE_ENV": "production",
+                        "GHOST_CONTENT": "/var/lib/ghost/content_files/",
+                        "paths__contentPath": "/var/lib/ghost/content_files/",
+                        "privacy_useUpdateCheck": "false",
+                        "url": "[concat('https://', variables('cdnEndpointName'), '.azureedge.net')]", //Using Azure CDN suffix for creating the URL. Specify your custom domain name if using one with Azure CDN.
+
+                        // Container-specific configuration settings
+                        "WEBSITES_ENABLE_APP_SERVICE_STORAGE": "true",
+                        "WEBSITES_CONTAINER_START_TIME_LIMIT": 460, // The containers need more time to warm up, especially during the first start when the MySQL container initializing its database
+                        "WEBSITES_WEB_CONTAINER_NAME": "ghost",
+                        "DATABASE_PASSWORD": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('databasePasswordResourceId')).secretUriWithVersion, ')')]" //Resolving the database password from the key vault secret
+                    }
+                },
                 {
                     "name": "[concat('Microsoft.Insights/', 'AppDiagnostics')]",
                     "type": "providers/diagnosticSettings",
