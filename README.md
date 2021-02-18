@@ -28,3 +28,4 @@ All resources have their diagnostic settings configured to stream resource logs 
 For the complete list of settings, please refer to the following blog posts:
 
 * [A one-click Ghost deployment on Azure Web App for Containers](https://andrewmatveychuk.com/a-one-click-ghost-deployment-on-azure-web-app-for-containers/)
+* [Ghost deployment on Azure: Security Hardening](https://andrewmatveychuk.com/ghost-deployment-on-azure-security-hardening/)
