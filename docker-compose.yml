@@ -16,6 +16,7 @@ services:
     image: andrewmatveychuk/ghost-ai:latest
     depends_on:
       - db
+    command: ["./wait-for-it.sh", "db:3306", "--"]
     volumes:
       - ${WEBAPP_STORAGE_HOME}/site/wwwroot/content_files:/var/lib/ghost/content_files
     restart: always
