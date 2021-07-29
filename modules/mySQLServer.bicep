@@ -73,3 +73,5 @@ resource mySQLServerDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
     ]
   }
 }
+
+output fullyQualifiedDomainName string = mySQLServer.properties.fullyQualifiedDomainName

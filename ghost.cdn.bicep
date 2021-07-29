@@ -3,13 +3,16 @@ targetScope = 'resourceGroup'
 @description('Prefix to use when creating the resources in this deployment.')
 param applicationNamePrefix string = 'ghost'
 
-@description('Pricing tier for the App Service Plan')
+@description('App Service Plan pricing tier')
 param appServicePlanSku string = 'B1'
 
-@description('Pricing tier for the Log Analytics workspace')
+@description('Log Analytics workspace pricing tier')
 param logAnalyticsWorkspaceSku string = 'Free'
 
-@description('Pricing tier for the CDN Profile')
+@description('Storage account pricing tier')
+param storageAccountSku string = 'Standard_LRS'
+
+@description('CDN profile pricing tier')
 param cdnProfileSku object = {
   name: 'Standard_Microsoft'
 }
@@ -24,20 +27,38 @@ param databasePassword string
 @description('MySQL Flexible Server SKU')
 param mySQLServerSku string = 'Standard_B1s'
 
+@description('Ghost container full image name and tag')
+param ghostContainerName string = 'andrewmatveychuk/ghost-ai:latest'
+
 var webAppName = '${applicationNamePrefix}-web-${uniqueString(resourceGroup().id)}'
 var appServicePlanName = '${applicationNamePrefix}-asp-${uniqueString(resourceGroup().id)}'
 var logAnalyticsWorkspaceName = '${applicationNamePrefix}-la-${uniqueString(resourceGroup().id)}'
 var applicationInsightsName = '${applicationNamePrefix}-ai-${uniqueString(resourceGroup().id)}'
 var keyVaultName = '${applicationNamePrefix}-kv-${uniqueString(resourceGroup().id)}'
+var storageAccountName = '${applicationNamePrefix}stor${uniqueString(resourceGroup().id)}'
 var mySQLServerName = '${applicationNamePrefix}-mysql-${uniqueString(resourceGroup().id)}'
 var cdnProfileName = '${applicationNamePrefix}-cdnp-${uniqueString(resourceGroup().id)}'
 var cdnEndpointName = '${applicationNamePrefix}-cdne-${uniqueString(resourceGroup().id)}'
+var databaseLogin = 'ghost'
+var ghostContentFileShareName = 'contentfiles'
+var ghostContentFilesMountPath = '/var/lib/ghost/content_files'
 
 module logAnalyticsWorkspace './modules/logAnalyticsWorkspace.bicep' = {
   name: 'logAnalyticsWorkspaceDeploy'
   params: {
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     logAnalyticsWorkspaceSku: logAnalyticsWorkspaceSku
+    location: location
+  }
+}
+
+module storageAccount 'modules/storageAccount.bicep' = {
+  name: 'storageAccountDeploy'
+  params: {
+    storageAccountName: storageAccountName
+    storageAccountSku: storageAccountSku
+    fileShareFolderName: ghostContentFileShareName
+    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
     location: location
   }
 }
@@ -59,6 +80,10 @@ module webApp './modules/webApp.bicep' = {
   params: {
     webAppName: webAppName
     appServicePlanId: appServicePlan.outputs.id
+    ghostContainerImage: ghostContainerName
+    storageAccountName: storageAccount.outputs.name
+    fileShareName: ghostContentFileShareName
+    containerMountPath: ghostContentFilesMountPath
     location: location
     logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
   }
@@ -70,6 +95,9 @@ module webAppSettings 'modules/webAppSettings.bicep' = {
     webAppName: webApp.outputs.name
     applicationInsightsConnectionString: applicationInsights.outputs.ConnectionString
     applicationInsightsInstrumentationKey: applicationInsights.outputs.InstrumentationKey
+    containerMountPath: ghostContentFilesMountPath
+    databaseHostFQDN: mySQLServer.outputs.fullyQualifiedDomainName
+    databaseLogin: databaseLogin
     databasePasswordSecretUri: keyVault.outputs.databasePasswordSecretUri
     siteUrl: 'https://${cdnEndpointName}.azureedge.net'
   }
@@ -97,7 +125,7 @@ module applicationInsights './modules/applicationInsights.bicep' = {
 module mySQLServer 'modules/mySQLServer.bicep' = {
   name: 'mySQLServerDeploy'
   params: {
-    administratorLogin: 'ghost'
+    administratorLogin: databaseLogin
     administratorPassword: databasePassword
     location: location
     logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id

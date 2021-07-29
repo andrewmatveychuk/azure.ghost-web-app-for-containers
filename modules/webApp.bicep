@@ -13,7 +13,21 @@ param appServicePlanId string
 @description('Log Analytics workspace id to use for diagnostics settings')
 param logAnalyticsWorkspaceId string
 
-resource webApp 'Microsoft.Web/sites@2020-09-01' = {
+@description('Ghost container full image name and tag')
+param ghostContainerImage string
+
+@description('Storage account name to store Ghost content files')
+param storageAccountName string
+
+@description('File share name on the storage account to store Ghost content files')
+param fileShareName string
+
+@description('Path to mount the file share in the container')
+param containerMountPath string
+
+var containerImageReference = 'DOCKER|${ghostContainerImage}'
+
+resource webApp 'Microsoft.Web/sites@2021-01-15' = {
   name: webAppName
   location: location
   kind: 'app,linux,container'
@@ -31,9 +45,17 @@ resource webApp 'Microsoft.Web/sites@2020-09-01' = {
       httpLoggingEnabled: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
-      linuxFxVersion: 'COMPOSE|dmVyc2lvbjogJzMuOCcKCnNlcnZpY2VzOgogICBkYjoKICAgIGltYWdlOiBteXNxbDo1LjcKICAgIHZvbHVtZXM6CiAgICAgICMgU2VlIGh0dHBzOi8vZG9jcy5taWNyb3NvZnQuY29tL2VuLXVzL2F6dXJlL2FwcC1zZXJ2aWNlL2NvbmZpZ3VyZS1jdXN0b20tY29udGFpbmVyP3Bpdm90cz1jb250YWluZXItbGludXgjY29uZmlndXJlLW11bHRpLWNvbnRhaW5lci1hcHBzCiAgICAgIC0gJHtXRUJBUFBfU1RPUkFHRV9IT01FfS9zaXRlL3d3d3Jvb3QvbXlzcWw6L3Zhci9saWIvbXlzcWwKICAgIHJlc3RhcnQ6IGFsd2F5cwogICAgZW52aXJvbm1lbnQ6CiAgICAgIE1ZU1FMX1JPT1RfSE9TVDogIiUiCiAgICAgICMgRmV0Y2hpbmcgdGhlIHBhc3N3b3JkIGZyb20gdGhlIGFwcGxpY2F0aW9uIHNldHRpbmdzCiAgICAgIE1ZU1FMX1JPT1RfUEFTU1dPUkQ6ICR7REFUQUJBU0VfUEFTU1dPUkR9CgogICBnaG9zdDoKICAgIGltYWdlOiBhbmRyZXdtYXR2ZXljaHVrL2dob3N0LWFpOmxhdGVzdAogICAgZGVwZW5kc19vbjoKICAgICAgLSBkYgogICAgY29tbWFuZDogWyIuL3dhaXQtZm9yLWl0LnNoIiwgImRiOjMzMDYiLCAiLS0iXQogICAgdm9sdW1lczoKICAgICAgLSAke1dFQkFQUF9TVE9SQUdFX0hPTUV9L3NpdGUvd3d3cm9vdC9jb250ZW50X2ZpbGVzOi92YXIvbGliL2dob3N0L2NvbnRlbnRfZmlsZXMKICAgIHJlc3RhcnQ6IGFsd2F5cwogICAgcG9ydHM6CiAgICAgIC0gODA6MjM2OAogICAgZW52aXJvbm1lbnQ6CiAgICAgICMgU2VlIGh0dHBzOi8vZG9jcy5naG9zdC5vcmcvZG9jcy9jb25maWcjc2VjdGlvbi1ydW5uaW5nLWdob3N0LXdpdGgtY29uZmlnLWVudi12YXJpYWJsZXMKICAgICAgZGF0YWJhc2VfX2NsaWVudDogbXlzcWwKICAgICAgZGF0YWJhc2VfX2Nvbm5lY3Rpb25fX2hvc3Q6IGRiCiAgICAgIGRhdGFiYXNlX19jb25uZWN0aW9uX191c2VyOiByb290CiAgICAgIGRhdGFiYXNlX19jb25uZWN0aW9uX19wYXNzd29yZDogJHtEQVRBQkFTRV9QQVNTV09SRH0KICAgICAgZGF0YWJhc2VfX2Nvbm5lY3Rpb25fX2RhdGFiYXNlOiBnaG9zdA=='
+      linuxFxVersion: containerImageReference
       alwaysOn: true
       use32BitWorkerProcess: false
+      azureStorageAccounts: {
+        ContentFilesVolume: {
+          type: 'AzureFiles'
+          accountName: storageAccountName
+          shareName: fileShareName
+          mountPath: containerMountPath
+        }
+      }
     }
   }
 }
