@@ -6,15 +6,26 @@ param applicationInsightsInstrumentationKey string
 
 param applicationInsightsConnectionString string
 
+@description('MySQL server hostname')
 param databaseHostFQDN string
 
+@description('Ghost datbase name')
+param databaseName string
+
+@description('Ghost database user name')
 param databaseLogin string
 
+@description('Ghost database user password')
 param databasePasswordSecretUri string
 
+@description('Website URL to autogenerate links by Ghost')
 param siteUrl string
 
+@description('Mount path for Ghost content files')
 param containerMountPath string
+
+@description('Container registry to pull Ghost docker image')
+param containerRegistryUrl string
 
 resource existingWebApp 'Microsoft.Web/sites@2020-09-01' existing = {
   name: webAppName
@@ -28,6 +39,9 @@ resource webAppSettings 'Microsoft.Web/sites/config@2021-01-15' = {
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsightsConnectionString
     ApplicationInsightsAgent_EXTENSION_VERSION: '~2'
     XDT_MicrosoftApplicationInsights_Mode: 'default'
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE: 'false'
+    DOCKER_REGISTRY_SERVER_URL: containerRegistryUrl
+    // Ghost-specific settings
     NODE_ENV: 'production'
     GHOST_CONTENT: containerMountPath
     paths__contentPath: containerMountPath
@@ -37,11 +51,8 @@ resource webAppSettings 'Microsoft.Web/sites/config@2021-01-15' = {
     database__connection__host: databaseHostFQDN
     database__connection__user: databaseLogin
     database__connection__password: '@Microsoft.KeyVault(SecretUri=${databasePasswordSecretUri})'
-    database__connection__database: 'ghost'
-    database__connection__ssl_rejectUnauthorized: 'true'
-    database__connection__ssl_secureProtocol: 'TLSv1_2_method'
-    WEBSITES_ENABLE_APP_SERVICE_STORAGE: 'false'
-    // WEBSITES_CONTAINER_START_TIME_LIMIT: '460'
-    // WEBSITES_WEB_CONTAINER_NAME: 'ghost'
+    database__connection__database: databaseName
+    database__connection__ssl: 'true'
+    database__connection__ssl_minVersion: 'TLSv1.2'
   }
 }
