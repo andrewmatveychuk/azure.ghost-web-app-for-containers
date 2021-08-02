@@ -28,6 +28,12 @@ param fileShareName string
 @description('Path to mount the file share in the container')
 param containerMountPath string
 
+@allowed([
+  'Web app with Azure CDN'
+  'Web app with Azure Front Door'
+])
+param deploymentConfiguration string
+
 var containerImageReference = 'DOCKER|${ghostContainerImage}'
 
 resource webApp 'Microsoft.Web/sites@2021-01-15' = {
@@ -61,6 +67,23 @@ resource webApp 'Microsoft.Web/sites@2021-01-15' = {
         }
       }
     }
+  }
+}
+
+resource siteConfig 'Microsoft.Web/sites/config@2021-01-15' = if (deploymentConfiguration == 'Web app with Azure Front Door') {
+  parent: webApp
+  name: 'web'
+  properties: {
+    ipSecurityRestrictions: [
+      {
+        ipAddress: 'AzureFrontDoor.Backend'
+        action: 'Allow'
+        tag: 'ServiceTag'
+        priority: 300
+        name: 'Access from Azure Front Door'
+        description: 'Rule for access from Azure Front Door'
+      }
+    ]
   }
 }
 
