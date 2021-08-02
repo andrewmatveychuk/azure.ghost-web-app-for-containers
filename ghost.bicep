@@ -52,7 +52,7 @@ var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door') ? 'ht
 //Web app with Azure CDN
 var cdnProfileName = '${applicationNamePrefix}-cdnp-${uniqueString(resourceGroup().id)}'
 var cdnEndpointName = '${applicationNamePrefix}-cdne-${uniqueString(resourceGroup().id)}'
-var cdnProfileSku  = {
+var cdnProfileSku = {
   name: 'Standard_Microsoft'
 }
 
@@ -104,6 +104,7 @@ module webApp './modules/webApp.bicep' = {
     containerMountPath: ghostContentFilesMountPath
     location: location
     logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    deploymentConfiguration: deploymentConfiguration
   }
 }
 
@@ -154,7 +155,7 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
   }
 }
 
-module cdnEndpoint './modules/cdnEndpoint.bicep' = if (deploymentConfiguration == 'Web app with Azure CDN'){
+module cdnEndpoint './modules/cdnEndpoint.bicep' = if (deploymentConfiguration == 'Web app with Azure CDN') {
   name: 'cdnEndPointDeploy'
   params: {
     cdnProfileName: cdnProfileName
@@ -179,5 +180,8 @@ module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Web
 
 output webAppName string = webApp.outputs.name
 output webAppPrincipalId string = webApp.outputs.principalId
-output cdnEndpointOrigin string = cdnEndpoint.outputs.cdnEndpointOrigin
-output cdnEndpointHostName string = cdnEndpoint.outputs.cdnEndpointHostName
+output webAppHostName string = webApp.outputs.hostName
+
+var endpointHostName = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontendEndpointHostName : cdnEndpoint.outputs.cdnEndpointHostName
+
+output endpointHostName string = endpointHostName
