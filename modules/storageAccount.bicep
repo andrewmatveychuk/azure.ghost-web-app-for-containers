@@ -56,3 +56,4 @@ resource storageAccountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-0
 output id string = storageAccount.id
 output name string = storageAccount.name
 output fileShareFullName string = fileShare.name
+output accessKey string = listKeys(storageAccount.id, storageAccount.apiVersion).keys[0].value

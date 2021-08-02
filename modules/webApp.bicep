@@ -19,6 +19,9 @@ param ghostContainerImage string
 @description('Storage account name to store Ghost content files')
 param storageAccountName string
 
+@secure()
+param storageAccountAccessKey string
+
 @description('File share name on the storage account to store Ghost content files')
 param fileShareName string
 
@@ -54,6 +57,7 @@ resource webApp 'Microsoft.Web/sites@2021-01-15' = {
           accountName: storageAccountName
           shareName: fileShareName
           mountPath: containerMountPath
+          accessKey: storageAccountAccessKey
         }
       }
     }
