@@ -12,23 +12,27 @@ param logAnalyticsWorkspaceSku string = 'Free'
 @description('Storage account pricing tier')
 param storageAccountSku string = 'Standard_LRS'
 
-@description('CDN profile pricing tier')
-param cdnProfileSku object = {
-  name: 'Standard_Microsoft'
-}
-
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
+
+@description('MySQL server SKU')
+param mySQLServerSku string = 'B_Gen5_1'
 
 @description('MySQL server password')
 @secure()
 param databasePassword string
 
-@description('MySQL Flexible Server SKU')
-param mySQLServerSku string = 'Standard_B1s'
-
 @description('Ghost container full image name and tag')
 param ghostContainerName string = 'andrewmatveychuk/ghost-ai:latest'
+
+@description('Container registry where the image is hosted')
+param containerRegistryUrl string = 'https://index.docker.io/v1'
+
+@allowed([
+  'Web app with Azure CDN'
+  'Web app with Azure Front Door'
+])
+param deploymentConfiguration string = 'Web app with Azure Front Door'
 
 var webAppName = '${applicationNamePrefix}-web-${uniqueString(resourceGroup().id)}'
 var appServicePlanName = '${applicationNamePrefix}-asp-${uniqueString(resourceGroup().id)}'
@@ -36,12 +40,25 @@ var logAnalyticsWorkspaceName = '${applicationNamePrefix}-la-${uniqueString(reso
 var applicationInsightsName = '${applicationNamePrefix}-ai-${uniqueString(resourceGroup().id)}'
 var keyVaultName = '${applicationNamePrefix}-kv-${uniqueString(resourceGroup().id)}'
 var storageAccountName = '${applicationNamePrefix}stor${uniqueString(resourceGroup().id)}'
+
 var mySQLServerName = '${applicationNamePrefix}-mysql-${uniqueString(resourceGroup().id)}'
-var cdnProfileName = '${applicationNamePrefix}-cdnp-${uniqueString(resourceGroup().id)}'
-var cdnEndpointName = '${applicationNamePrefix}-cdne-${uniqueString(resourceGroup().id)}'
 var databaseLogin = 'ghost'
+var databaseName = 'ghost'
+
 var ghostContentFileShareName = 'contentfiles'
 var ghostContentFilesMountPath = '/var/lib/ghost/content_files'
+var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door') ? 'https://${frontDoorName}.azurefd.net' : 'https://${cdnEndpointName}.azureedge.net'
+
+//Web app with Azure CDN
+var cdnProfileName = '${applicationNamePrefix}-cdnp-${uniqueString(resourceGroup().id)}'
+var cdnEndpointName = '${applicationNamePrefix}-cdne-${uniqueString(resourceGroup().id)}'
+var cdnProfileSku  = {
+  name: 'Standard_Microsoft'
+}
+
+//Web app with Azure Front Door
+var frontDoorName = '${applicationNamePrefix}-fd-${uniqueString(resourceGroup().id)}'
+var wafPolicyName = '${applicationNamePrefix}waf${uniqueString(resourceGroup().id)}'
 
 module logAnalyticsWorkspace './modules/logAnalyticsWorkspace.bicep' = {
   name: 'logAnalyticsWorkspaceDeploy'
@@ -82,6 +99,7 @@ module webApp './modules/webApp.bicep' = {
     appServicePlanId: appServicePlan.outputs.id
     ghostContainerImage: ghostContainerName
     storageAccountName: storageAccount.outputs.name
+    storageAccountAccessKey: storageAccount.outputs.accessKey
     fileShareName: ghostContentFileShareName
     containerMountPath: ghostContentFilesMountPath
     location: location
@@ -95,11 +113,13 @@ module webAppSettings 'modules/webAppSettings.bicep' = {
     webAppName: webApp.outputs.name
     applicationInsightsConnectionString: applicationInsights.outputs.ConnectionString
     applicationInsightsInstrumentationKey: applicationInsights.outputs.InstrumentationKey
+    containerRegistryUrl: containerRegistryUrl
     containerMountPath: ghostContentFilesMountPath
     databaseHostFQDN: mySQLServer.outputs.fullyQualifiedDomainName
-    databaseLogin: databaseLogin
+    databaseLogin: '${databaseLogin}@${mySQLServer.outputs.name}'
     databasePasswordSecretUri: keyVault.outputs.databasePasswordSecretUri
-    siteUrl: 'https://${cdnEndpointName}.azureedge.net'
+    databaseName: databaseName
+    siteUrl: siteUrl
   }
 }
 
@@ -134,7 +154,7 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
   }
 }
 
-module cdnEndpoint './modules/cdnEndpoint.bicep' = {
+module cdnEndpoint './modules/cdnEndpoint.bicep' = if (deploymentConfiguration == 'Web app with Azure CDN'){
   name: 'cdnEndPointDeploy'
   params: {
     cdnProfileName: cdnProfileName
@@ -144,6 +164,16 @@ module cdnEndpoint './modules/cdnEndpoint.bicep' = {
     logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
     webAppName: webApp.name
     webAppHostName: webApp.outputs.hostName
+  }
+}
+
+module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Web app with Azure Front Door') {
+  name: 'FrontDoorDeploy'
+  params: {
+    frontDoorName: frontDoorName
+    wafPolicyName: wafPolicyName
+    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    webAppName: webApp.outputs.name
   }
 }
 
