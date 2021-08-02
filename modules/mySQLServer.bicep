@@ -5,9 +5,8 @@ targetScope = 'resourceGroup'
 param mySQLServerName string
 
 @allowed([
-  'Standard_B1s'
-  'Standard_B1ms'
-  'Standard_B2s'
+  'B_Gen5_1'
+  'B_Gen5_2'
 ])
 param mySQLServerSku string
 
@@ -27,21 +26,24 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace id to use for diagnostics settings')
 param logAnalyticsWorkspaceId string
 
-resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2021-05-01-preview' = {
+resource mySQLServer 'Microsoft.DBforMySQL/servers@2017-12-01' = {
   name: mySQLServerName
   location: location
   sku: {
     name: mySQLServerSku
-    tier: 'Burstable'
+    tier: 'Basic'
   }
   properties: {
+    createMode: 'Default'
     version: '5.7'
     administratorLogin: administratorLogin
     administratorLoginPassword: administratorPassword
+    sslEnforcement: 'Enabled'
+    minimalTlsVersion: 'TLS1_2'
   }
 }
 
-resource firewallRules 'Microsoft.DBforMySQL/flexibleServers/firewallRules@2021-05-01-preview' = {
+resource firewallRules 'Microsoft.DBforMySQL/servers/firewallRules@2017-12-01' = {
   parent: mySQLServer
   name: 'AllowAzureIPs'
   properties: {
@@ -74,4 +76,5 @@ resource mySQLServerDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
   }
 }
 
+output name string = mySQLServer.name
 output fullyQualifiedDomainName string = mySQLServer.properties.fullyQualifiedDomainName
