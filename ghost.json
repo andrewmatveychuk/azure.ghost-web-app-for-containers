@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.4.451.19169",
-      "templateHash": "7331749420003517602"
+      "templateHash": "7104227692860940787"
     }
   },
   "parameters": {
@@ -521,6 +521,9 @@
           },
           "logAnalyticsWorkspaceId": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2019-10-01').outputs.id.value]"
+          },
+          "deploymentConfiguration": {
+            "value": "[parameters('deploymentConfiguration')]"
           }
         },
         "template": {
@@ -530,7 +533,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.4.451.19169",
-              "templateHash": "4010260576769823235"
+              "templateHash": "6429339839326132580"
             }
           },
           "parameters": {
@@ -584,6 +587,13 @@
               "metadata": {
                 "description": "Path to mount the file share in the container"
               }
+            },
+            "deploymentConfiguration": {
+              "type": "string",
+              "allowedValues": [
+                "Web app with Azure CDN",
+                "Web app with Azure Front Door"
+              ]
             }
           },
           "functions": [],
@@ -625,6 +635,27 @@
                   }
                 }
               }
+            },
+            {
+              "condition": "[equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door')]",
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2021-01-15",
+              "name": "[format('{0}/{1}', parameters('webAppName'), 'web')]",
+              "properties": {
+                "ipSecurityRestrictions": [
+                  {
+                    "ipAddress": "AzureFrontDoor.Backend",
+                    "action": "Allow",
+                    "tag": "ServiceTag",
+                    "priority": 300,
+                    "name": "Access from Azure Front Door",
+                    "description": "Rule for access from Azure Front Door"
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+              ]
             },
             {
               "type": "Microsoft.Insights/diagnosticSettings",
@@ -1526,7 +1557,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.4.451.19169",
-              "templateHash": "3809007504509087818"
+              "templateHash": "1610721894913535056"
             }
           },
           "parameters": {
@@ -1709,7 +1740,13 @@
                 }
               }
             }
-          ]
+          ],
+          "outputs": {
+            "frontendEndpointHostName": {
+              "type": "string",
+              "value": "[variables('frontendEndpoint1hostName')]"
+            }
+          }
         }
       },
       "dependsOn": [
@@ -1727,13 +1764,13 @@
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2019-10-01').outputs.principalId.value]"
     },
-    "cdnEndpointOrigin": {
+    "webAppHostName": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cdnEndPointDeploy'), '2019-10-01').outputs.cdnEndpointOrigin.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2019-10-01').outputs.hostName.value]"
     },
-    "cdnEndpointHostName": {
+    "endpointHostName": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cdnEndPointDeploy'), '2019-10-01').outputs.cdnEndpointHostName.value]"
+      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2019-10-01').outputs.frontendEndpointHostName.value, reference(resourceId('Microsoft.Resources/deployments', 'cdnEndPointDeploy'), '2019-10-01').outputs.cdnEndpointHostName.value)]"
     }
   }
 }
