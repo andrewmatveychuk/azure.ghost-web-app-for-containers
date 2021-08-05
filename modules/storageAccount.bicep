@@ -33,12 +33,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   }
 }
 
-var fileShareName = '${storageAccount.name}/default/${fileShareFolderName}'
-
-resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2021-04-01' = {
-  name: fileShareName
-}
-
 resource storageAccountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   scope: storageAccount
   name: 'StorageAccountDiagnostics'
@@ -51,6 +45,46 @@ resource storageAccountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-0
       }
     ]
   }
+}
+
+resource fileServices 'Microsoft.Storage/storageAccounts/fileServices@2021-04-01' = {
+  parent: storageAccount
+  name: 'default'
+}
+
+resource fileServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  scope: fileServices
+  name: 'FileServicesDiagnostics'
+  properties: {
+    workspaceId: logAnalyticsWorkspaceId
+    metrics: [
+      {
+        category: 'Transaction'
+        enabled: true
+      }
+    ]
+    logs: [
+      {
+        category: 'StorageRead'
+        enabled: true
+      }
+      {
+        category: 'StorageWrite'
+        enabled: true
+      }
+      {
+        category: 'StorageDelete'
+        enabled: true
+      }
+    ]
+  }
+}
+
+// var fileShareName = '${storageAccount.name}/default/${fileShareFolderName}'
+
+resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2021-04-01' = {
+  parent: fileServices
+  name: fileShareFolderName
 }
 
 output id string = storageAccount.id

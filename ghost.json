@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.4.451.19169",
-      "templateHash": "7104227692860940787"
+      "templateHash": "3459115036652227731"
     }
   },
   "parameters": {
@@ -221,7 +221,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.4.451.19169",
-              "templateHash": "12243856086535054820"
+              "templateHash": "10351479690268579456"
             }
           },
           "parameters": {
@@ -259,9 +259,6 @@
             }
           },
           "functions": [],
-          "variables": {
-            "fileShareName": "[format('{0}/default/{1}', parameters('storageAccountName'), parameters('fileShareFolderName'))]"
-          },
           "resources": [
             {
               "type": "Microsoft.Storage/storageAccounts",
@@ -276,14 +273,6 @@
                 "supportsHttpsTrafficOnly": true,
                 "minimumTlsVersion": "TLS1_2"
               }
-            },
-            {
-              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
-              "apiVersion": "2021-04-01",
-              "name": "[variables('fileShareName')]",
-              "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
-              ]
             },
             {
               "type": "Microsoft.Insights/diagnosticSettings",
@@ -302,6 +291,55 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
               ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices",
+              "apiVersion": "2021-04-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}/fileServices/{1}', parameters('storageAccountName'), 'default')]",
+              "name": "FileServicesDiagnostics",
+              "properties": {
+                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "metrics": [
+                  {
+                    "category": "Transaction",
+                    "enabled": true
+                  }
+                ],
+                "logs": [
+                  {
+                    "category": "StorageRead",
+                    "enabled": true
+                  },
+                  {
+                    "category": "StorageWrite",
+                    "enabled": true
+                  },
+                  {
+                    "category": "StorageDelete",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+              "apiVersion": "2021-04-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', parameters('fileShareFolderName'))]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -315,7 +353,7 @@
             },
             "fileShareFullName": {
               "type": "string",
-              "value": "[variables('fileShareName')]"
+              "value": "[parameters('fileShareFolderName')]"
             },
             "accessKey": {
               "type": "string",
