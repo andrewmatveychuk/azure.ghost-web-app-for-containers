@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.4.451.19169",
-      "templateHash": "3459115036652227731"
+      "version": "0.4.613.9944",
+      "templateHash": "15086504457356430864"
     }
   },
   "parameters": {
@@ -129,8 +129,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "1437501155931888076"
+              "version": "0.4.613.9944",
+              "templateHash": "9265898068587084659"
             }
           },
           "parameters": {
@@ -220,8 +220,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "10351479690268579456"
+              "version": "0.4.613.9944",
+              "templateHash": "4920110218071452594"
             }
           },
           "parameters": {
@@ -401,8 +401,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "17489508816139809862"
+              "version": "0.4.613.9944",
+              "templateHash": "2873382072908167823"
             }
           },
           "parameters": {
@@ -570,8 +570,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "6429339839326132580"
+              "version": "0.4.613.9944",
+              "templateHash": "5784214114118661546"
             }
           },
           "parameters": {
@@ -722,10 +722,6 @@
                     "enabled": true
                   },
                   {
-                    "category": "AppServiceFileAuditLogs",
-                    "enabled": true
-                  },
-                  {
                     "category": "AppServiceAuditLogs",
                     "enabled": true
                   },
@@ -735,10 +731,6 @@
                   },
                   {
                     "category": "AppServicePlatformLogs",
-                    "enabled": true
-                  },
-                  {
-                    "category": "AppServiceAntivirusScanAuditLogs",
                     "enabled": true
                   }
                 ]
@@ -817,8 +809,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "10919912356534675158"
+              "version": "0.4.613.9944",
+              "templateHash": "4622824001677557339"
             }
           },
           "parameters": {
@@ -940,8 +932,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "7771315834724096188"
+              "version": "0.4.613.9944",
+              "templateHash": "11095872737791834731"
             }
           },
           "parameters": {
@@ -1056,8 +1048,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "15184986202595358693"
+              "version": "0.4.613.9944",
+              "templateHash": "15299663174631966443"
             }
           },
           "parameters": {
@@ -1212,8 +1204,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "13571962052386037009"
+              "version": "0.4.613.9944",
+              "templateHash": "3381572837473804440"
             }
           },
           "parameters": {
@@ -1374,8 +1366,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "155623134872763715"
+              "version": "0.4.613.9944",
+              "templateHash": "15943812728167166696"
             }
           },
           "parameters": {
@@ -1594,8 +1586,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.451.19169",
-              "templateHash": "1610721894913535056"
+              "version": "0.4.613.9944",
+              "templateHash": "4802262148995897875"
             }
           },
           "parameters": {

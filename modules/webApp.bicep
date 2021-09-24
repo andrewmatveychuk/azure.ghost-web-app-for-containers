@@ -112,10 +112,6 @@ resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
         enabled: true
       }
       {
-        category: 'AppServiceFileAuditLogs'
-        enabled: true
-      }
-      {
         category: 'AppServiceAuditLogs'
         enabled: true
       }
@@ -125,10 +121,6 @@ resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
       }
       {
         category: 'AppServicePlatformLogs'
-        enabled: true
-      }
-      {
-        category: 'AppServiceAntivirusScanAuditLogs'
         enabled: true
       }
     ]
