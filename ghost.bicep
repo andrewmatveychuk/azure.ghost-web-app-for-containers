@@ -143,7 +143,7 @@ module applicationInsights './modules/applicationInsights.bicep' = {
   }
 }
 
-module mySQLServer 'modules/mySQLServer.bicep' = {
+module mySQLServer 'modules/mySQLFlexibleServer.bicep' = {
   name: 'mySQLServerDeploy'
   params: {
     administratorLogin: databaseLogin
