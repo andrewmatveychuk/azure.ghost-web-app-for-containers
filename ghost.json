@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.4.613.9944",
-      "templateHash": "15086504457356430864"
+      "version": "0.29.47.4906",
+      "templateHash": "8606174210315145887"
     }
   },
   "parameters": {
@@ -52,7 +52,7 @@
       }
     },
     "databasePassword": {
-      "type": "secureString",
+      "type": "securestring",
       "metadata": {
         "description": "MySQL server password"
       }
@@ -80,7 +80,6 @@
       ]
     }
   },
-  "functions": [],
   "variables": {
     "webAppName": "[format('{0}-web-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
     "appServicePlanName": "[format('{0}-asp-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
@@ -105,7 +104,7 @@
   "resources": [
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "logAnalyticsWorkspaceDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -129,15 +128,15 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "9265898068587084659"
+              "version": "0.29.47.4906",
+              "templateHash": "7760339247620275076"
             }
           },
           "parameters": {
             "logAnalyticsWorkspaceName": {
               "type": "string",
-              "maxLength": 64,
               "minLength": 4,
+              "maxLength": 64,
               "metadata": {
                 "description": "Log Analytics workspace name"
               }
@@ -165,7 +164,6 @@
               }
             }
           },
-          "functions": [],
           "resources": [
             {
               "type": "Microsoft.OperationalInsights/workspaces",
@@ -190,7 +188,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "storageAccountDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -208,7 +206,7 @@
             "value": "[variables('ghostContentFileShareName')]"
           },
           "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2019-10-01').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -220,15 +218,15 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "4920110218071452594"
+              "version": "0.29.47.4906",
+              "templateHash": "1948841871593543274"
             }
           },
           "parameters": {
             "storageAccountName": {
               "type": "string",
-              "maxLength": 24,
-              "minLength": 3
+              "minLength": 3,
+              "maxLength": 24
             },
             "storageAccountSku": {
               "type": "string",
@@ -258,7 +256,6 @@
               }
             }
           },
-          "functions": [],
           "resources": [
             {
               "type": "Microsoft.Storage/storageAccounts",
@@ -337,8 +334,7 @@
               "apiVersion": "2021-04-01",
               "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', parameters('fileShareFolderName'))]",
               "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]",
-                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]"
               ]
             }
           ],
@@ -368,7 +364,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "keyVaultDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -386,10 +382,10 @@
             "value": "[parameters('databasePassword')]"
           },
           "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2019-10-01').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
           },
           "servicePrincipalId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2019-10-01').outputs.principalId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.principalId.value]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -401,29 +397,29 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "2873382072908167823"
+              "version": "0.29.47.4906",
+              "templateHash": "5004357487343715539"
             }
           },
           "parameters": {
             "keyVaultName": {
               "type": "string",
-              "maxLength": 24,
               "minLength": 3,
+              "maxLength": 24,
               "metadata": {
                 "description": "Key Vault name"
               }
             },
             "keyVaultSecretName": {
               "type": "string",
-              "maxLength": 127,
               "minLength": 1,
+              "maxLength": 127,
               "metadata": {
                 "description": "Secret name to store"
               }
             },
             "keyVaultSecretValue": {
-              "type": "secureString",
+              "type": "securestring",
               "metadata": {
                 "description": "Secret value to store"
               }
@@ -448,7 +444,6 @@
               }
             }
           },
-          "functions": [],
           "resources": [
             {
               "type": "Microsoft.KeyVault/vaults",
@@ -513,7 +508,7 @@
           "outputs": {
             "databasePasswordSecretUri": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), parameters('keyVaultSecretName'))).secretUri]"
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), parameters('keyVaultSecretName')), '2019-09-01').secretUri]"
             }
           }
         }
@@ -525,7 +520,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "webAppDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -537,16 +532,16 @@
             "value": "[variables('webAppName')]"
           },
           "appServicePlanId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appServicePlanDeploy'), '2019-10-01').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appServicePlanDeploy'), '2022-09-01').outputs.id.value]"
           },
           "ghostContainerImage": {
             "value": "[parameters('ghostContainerName')]"
           },
           "storageAccountName": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy'), '2019-10-01').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy'), '2022-09-01').outputs.name.value]"
           },
           "storageAccountAccessKey": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy'), '2019-10-01').outputs.accessKey.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy'), '2022-09-01').outputs.accessKey.value]"
           },
           "fileShareName": {
             "value": "[variables('ghostContentFileShareName')]"
@@ -558,7 +553,7 @@
             "value": "[parameters('location')]"
           },
           "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2019-10-01').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
           },
           "deploymentConfiguration": {
             "value": "[parameters('deploymentConfiguration')]"
@@ -570,15 +565,15 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "5784214114118661546"
+              "version": "0.29.47.4906",
+              "templateHash": "15687407664873650909"
             }
           },
           "parameters": {
             "webAppName": {
               "type": "string",
-              "maxLength": 60,
-              "minLength": 2
+              "minLength": 2,
+              "maxLength": 60
             },
             "location": {
               "type": "string",
@@ -612,7 +607,7 @@
               }
             },
             "storageAccountAccessKey": {
-              "type": "secureString"
+              "type": "securestring"
             },
             "fileShareName": {
               "type": "string",
@@ -634,7 +629,6 @@
               ]
             }
           },
-          "functions": [],
           "variables": {
             "containerImageReference": "[format('DOCKER|{0}', parameters('ghostContainerImage'))]"
           },
@@ -747,7 +741,7 @@
             },
             "hostName": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName'))).hostNames[0]]"
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2021-01-15').hostNames[0]]"
             },
             "principalId": {
               "type": "string",
@@ -764,7 +758,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "webAppSettingsDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -773,13 +767,13 @@
         "mode": "Incremental",
         "parameters": {
           "webAppName": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2019-10-01').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.name.value]"
           },
           "applicationInsightsConnectionString": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'applicationInsightsDeploy'), '2019-10-01').outputs.ConnectionString.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'applicationInsightsDeploy'), '2022-09-01').outputs.ConnectionString.value]"
           },
           "applicationInsightsInstrumentationKey": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'applicationInsightsDeploy'), '2019-10-01').outputs.InstrumentationKey.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'applicationInsightsDeploy'), '2022-09-01').outputs.InstrumentationKey.value]"
           },
           "containerRegistryUrl": {
             "value": "[parameters('containerRegistryUrl')]"
@@ -788,13 +782,13 @@
             "value": "[variables('ghostContentFilesMountPath')]"
           },
           "databaseHostFQDN": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'mySQLServerDeploy'), '2019-10-01').outputs.fullyQualifiedDomainName.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'mySQLServerDeploy'), '2022-09-01').outputs.fullyQualifiedDomainName.value]"
           },
           "databaseLogin": {
-            "value": "[format('{0}@{1}', variables('databaseLogin'), reference(resourceId('Microsoft.Resources/deployments', 'mySQLServerDeploy'), '2019-10-01').outputs.name.value)]"
+            "value": "[format('{0}@{1}', variables('databaseLogin'), reference(resourceId('Microsoft.Resources/deployments', 'mySQLServerDeploy'), '2022-09-01').outputs.name.value)]"
           },
           "databasePasswordSecretUri": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVaultDeploy'), '2019-10-01').outputs.databasePasswordSecretUri.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVaultDeploy'), '2022-09-01').outputs.databasePasswordSecretUri.value]"
           },
           "databaseName": {
             "value": "[variables('databaseName')]"
@@ -809,8 +803,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "4622824001677557339"
+              "version": "0.29.47.4906",
+              "templateHash": "8773736059472072040"
             }
           },
           "parameters": {
@@ -866,7 +860,6 @@
               }
             }
           },
-          "functions": [],
           "resources": [
             {
               "type": "Microsoft.Web/sites/config",
@@ -905,7 +898,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "appServicePlanDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -923,7 +916,7 @@
             "value": "[parameters('location')]"
           },
           "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2019-10-01').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
           }
         },
         "template": {
@@ -932,15 +925,15 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "11095872737791834731"
+              "version": "0.29.47.4906",
+              "templateHash": "1623225134788939774"
             }
           },
           "parameters": {
             "appServicePlanName": {
               "type": "string",
-              "maxLength": 40,
               "minLength": 1,
+              "maxLength": 40,
               "metadata": {
                 "description": "App Service Plan name"
               }
@@ -976,7 +969,6 @@
               }
             }
           },
-          "functions": [],
           "resources": [
             {
               "type": "Microsoft.Web/serverfarms",
@@ -1024,7 +1016,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "applicationInsightsDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1039,7 +1031,7 @@
             "value": "[parameters('location')]"
           },
           "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2019-10-01').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
           }
         },
         "template": {
@@ -1048,15 +1040,15 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "15299663174631966443"
+              "version": "0.29.47.4906",
+              "templateHash": "4041261368770150089"
             }
           },
           "parameters": {
             "applicationInsightsName": {
               "type": "string",
-              "maxLength": 260,
               "minLength": 1,
+              "maxLength": 260,
               "metadata": {
                 "description": "Application Insights name"
               }
@@ -1075,7 +1067,6 @@
               }
             }
           },
-          "functions": [],
           "resources": [
             {
               "type": "Microsoft.Insights/components",
@@ -1156,11 +1147,11 @@
           "outputs": {
             "InstrumentationKey": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))).InstrumentationKey]"
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').InstrumentationKey]"
             },
             "ConnectionString": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))).ConnectionString]"
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString]"
             }
           }
         }
@@ -1171,7 +1162,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "mySQLServerDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1189,7 +1180,7 @@
             "value": "[parameters('location')]"
           },
           "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2019-10-01').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
           },
           "mySQLServerName": {
             "value": "[variables('mySQLServerName')]"
@@ -1204,88 +1195,178 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "3381572837473804440"
+              "version": "0.29.47.4906",
+              "templateHash": "11278973875572273941"
             }
           },
           "parameters": {
             "mySQLServerName": {
               "type": "string",
-              "maxLength": 63,
-              "minLength": 3
-            },
-            "mySQLServerSku": {
-              "type": "string",
-              "allowedValues": [
-                "B_Gen5_1",
-                "B_Gen5_2"
-              ]
-            },
-            "administratorLogin": {
-              "type": "string",
-              "minLength": 1,
-              "metadata": {
-                "description": "Database administrator login name"
-              }
-            },
-            "administratorPassword": {
-              "type": "secureString",
-              "maxLength": 128,
-              "minLength": 8,
-              "metadata": {
-                "description": "Database administrator password"
-              }
-            },
-            "location": {
-              "type": "string",
-              "defaultValue": "[resourceGroup().location]",
-              "metadata": {
-                "description": "Location to deploy the resources"
-              }
+              "minLength": 3,
+              "maxLength": 63
             },
             "logAnalyticsWorkspaceId": {
               "type": "string",
               "metadata": {
                 "description": "Log Analytics workspace id to use for diagnostics settings"
               }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Provide the location for all the resources."
+              }
+            },
+            "administratorLogin": {
+              "type": "string",
+              "metadata": {
+                "description": "Provide the administrator login username for the flexible server."
+              }
+            },
+            "administratorPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Provide the administrator login password for the flexible server."
+              }
+            },
+            "firewallRules": {
+              "type": "array",
+              "defaultValue": [
+                {
+                  "name": "rule1",
+                  "startIPAddress": "192.168.0.1",
+                  "endIPAddress": "192.168.0.255"
+                },
+                {
+                  "name": "rule2",
+                  "startIPAddress": "192.168.1.1",
+                  "endIPAddress": "192.168.1.255"
+                }
+              ],
+              "metadata": {
+                "description": "Provide an array of firewall rules to apply to the flexible server."
+              }
+            },
+            "serverEdition": {
+              "type": "string",
+              "defaultValue": "Burstable",
+              "allowedValues": [
+                "Burstable",
+                "GeneralPurpose",
+                "MemoryOptimized"
+              ],
+              "metadata": {
+                "description": "The tier of the particular SKU. High availability mode is available only in the GeneralPurpose and MemoryOptimized SKUs."
+              }
+            },
+            "version": {
+              "type": "string",
+              "defaultValue": "8.0.21",
+              "allowedValues": [
+                "5.7",
+                "8.0.21"
+              ],
+              "metadata": {
+                "description": "Server version"
+              }
+            },
+            "availabilityZone": {
+              "type": "string",
+              "defaultValue": "1",
+              "metadata": {
+                "description": "The availability zone information for the server. If no preference, leave blank."
+              }
+            },
+            "haEnabled": {
+              "type": "string",
+              "defaultValue": "Disabled",
+              "allowedValues": [
+                "Disabled",
+                "SameZone",
+                "ZoneRedundant"
+              ],
+              "metadata": {
+                "description": "High availability mode for a server: Disabled, SameZone, or ZoneRedundant."
+              }
+            },
+            "standbyAvailabilityZone": {
+              "type": "string",
+              "defaultValue": "2",
+              "metadata": {
+                "description": "The availability zone of the standby server."
+              }
+            },
+            "storageSizeGB": {
+              "type": "int",
+              "defaultValue": 20
+            },
+            "storageIops": {
+              "type": "int",
+              "defaultValue": 360
+            },
+            "storageAutogrow": {
+              "type": "string",
+              "defaultValue": "Enabled",
+              "allowedValues": [
+                "Enabled",
+                "Disabled"
+              ]
+            },
+            "mySQLServerSku": {
+              "type": "string",
+              "defaultValue": "Standard_B1ms",
+              "metadata": {
+                "description": "The name of the SKU, such as Standard_D32ds_v4."
+              }
+            },
+            "backupRetentionDays": {
+              "type": "int",
+              "defaultValue": 7
+            },
+            "geoRedundantBackup": {
+              "type": "string",
+              "defaultValue": "Disabled",
+              "allowedValues": [
+                "Disabled",
+                "Enabled"
+              ]
             }
           },
-          "functions": [],
           "resources": [
             {
-              "type": "Microsoft.DBforMySQL/servers",
-              "apiVersion": "2017-12-01",
+              "type": "Microsoft.DBforMySQL/flexibleServers",
+              "apiVersion": "2021-12-01-preview",
               "name": "[parameters('mySQLServerName')]",
               "location": "[parameters('location')]",
               "sku": {
                 "name": "[parameters('mySQLServerSku')]",
-                "tier": "Basic"
+                "tier": "[parameters('serverEdition')]"
               },
               "properties": {
-                "createMode": "Default",
-                "version": "5.7",
+                "version": "[parameters('version')]",
                 "administratorLogin": "[parameters('administratorLogin')]",
                 "administratorLoginPassword": "[parameters('administratorPassword')]",
-                "sslEnforcement": "Enabled",
-                "minimalTlsVersion": "TLS1_2"
+                "availabilityZone": "[parameters('availabilityZone')]",
+                "highAvailability": {
+                  "mode": "[parameters('haEnabled')]",
+                  "standbyAvailabilityZone": "[parameters('standbyAvailabilityZone')]"
+                },
+                "storage": {
+                  "storageSizeGB": "[parameters('storageSizeGB')]",
+                  "iops": "[parameters('storageIops')]",
+                  "autoGrow": "[parameters('storageAutogrow')]"
+                },
+                "backup": {
+                  "backupRetentionDays": "[parameters('backupRetentionDays')]",
+                  "geoRedundantBackup": "[parameters('geoRedundantBackup')]"
+                }
               }
-            },
-            {
-              "type": "Microsoft.DBforMySQL/servers/firewallRules",
-              "apiVersion": "2017-12-01",
-              "name": "[format('{0}/{1}', parameters('mySQLServerName'), 'AllowAzureIPs')]",
-              "properties": {
-                "startIpAddress": "0.0.0.0",
-                "endIpAddress": "0.0.0.0"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.DBforMySQL/servers', parameters('mySQLServerName'))]"
-              ]
             },
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.DBforMySQL/servers/{0}', parameters('mySQLServerName'))]",
+              "scope": "[format('Microsoft.DBforMySQL/flexibleServers/{0}', parameters('mySQLServerName'))]",
               "name": "MySQLServerDiagnostics",
               "properties": {
                 "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
@@ -1307,7 +1388,65 @@
                 ]
               },
               "dependsOn": [
-                "[resourceId('Microsoft.DBforMySQL/servers', parameters('mySQLServerName'))]"
+                "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "createFirewallRules",
+                "count": "[length(range(0, if(greater(length(parameters('firewallRules')), 0), length(parameters('firewallRules')), 1)))]",
+                "mode": "serial",
+                "batchSize": 1
+              },
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2022-09-01",
+              "name": "[format('firewallRules-{0}', range(0, if(greater(length(parameters('firewallRules')), 0), length(parameters('firewallRules')), 1))[copyIndex()])]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "ip": {
+                    "value": "[parameters('firewallRules')[range(0, if(greater(length(parameters('firewallRules')), 0), length(parameters('firewallRules')), 1))[copyIndex()]]]"
+                  },
+                  "serverName": {
+                    "value": "[parameters('mySQLServerName')]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.29.47.4906",
+                      "templateHash": "4681378500324533197"
+                    }
+                  },
+                  "parameters": {
+                    "serverName": {
+                      "type": "string"
+                    },
+                    "ip": {
+                      "type": "object"
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules",
+                      "apiVersion": "2021-12-01-preview",
+                      "name": "[format('{0}/{1}', parameters('serverName'), parameters('ip').name)]",
+                      "properties": {
+                        "startIpAddress": "[parameters('ip').startIPAddress]",
+                        "endIpAddress": "[parameters('ip').endIPAddress]"
+                      }
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]"
               ]
             }
           ],
@@ -1318,7 +1457,7 @@
             },
             "fullyQualifiedDomainName": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.DBforMySQL/servers', parameters('mySQLServerName'))).fullyQualifiedDomainName]"
+              "value": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2021-12-01-preview').fullyQualifiedDomainName]"
             }
           }
         }
@@ -1330,7 +1469,7 @@
     {
       "condition": "[equals(parameters('deploymentConfiguration'), 'Web app with Azure CDN')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "cdnEndPointDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1351,13 +1490,13 @@
             "value": "[parameters('location')]"
           },
           "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2019-10-01').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
           },
           "webAppName": {
             "value": "webAppDeploy"
           },
           "webAppHostName": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2019-10-01').outputs.hostName.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value]"
           }
         },
         "template": {
@@ -1366,15 +1505,15 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "15943812728167166696"
+              "version": "0.29.47.4906",
+              "templateHash": "15406575498218848792"
             }
           },
           "parameters": {
             "cdnProfileName": {
               "type": "string",
-              "maxLength": 260,
               "minLength": 1,
+              "maxLength": 260,
               "metadata": {
                 "description": "CDN Profile name"
               }
@@ -1387,8 +1526,8 @@
             },
             "cdnEndpointName": {
               "type": "string",
-              "maxLength": 50,
               "minLength": 1,
+              "maxLength": 50,
               "metadata": {
                 "description": "CDN Endpoint name"
               }
@@ -1419,7 +1558,6 @@
               }
             }
           },
-          "functions": [],
           "resources": [
             {
               "type": "Microsoft.Cdn/profiles",
@@ -1542,11 +1680,11 @@
           "outputs": {
             "cdnEndpointOrigin": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))).hostName]"
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName')), '2020-09-01').hostName]"
             },
             "cdnEndpointHostName": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))).originHostHeader]"
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName')), '2020-09-01').originHostHeader]"
             }
           }
         }
@@ -1559,7 +1697,7 @@
     {
       "condition": "[equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2022-09-01",
       "name": "FrontDoorDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1574,10 +1712,10 @@
             "value": "[variables('wafPolicyName')]"
           },
           "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2019-10-01').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
           },
           "webAppName": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2019-10-01').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.name.value]"
           }
         },
         "template": {
@@ -1586,20 +1724,20 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.4.613.9944",
-              "templateHash": "4802262148995897875"
+              "version": "0.29.47.4906",
+              "templateHash": "17340331655918863357"
             }
           },
           "parameters": {
             "frontDoorName": {
               "type": "string",
-              "maxLength": 64,
-              "minLength": 5
+              "minLength": 5,
+              "maxLength": 64
             },
             "wafPolicyName": {
               "type": "string",
-              "maxLength": 128,
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 128
             },
             "logAnalyticsWorkspaceId": {
               "type": "string",
@@ -1614,7 +1752,6 @@
               }
             }
           },
-          "functions": [],
           "variables": {
             "backendPool1Name": "[format('{0}-backendPool1', parameters('frontDoorName'))]",
             "healthProbe1Name": "[format('{0}-healthProbe1', parameters('frontDoorName'))]",
@@ -1788,19 +1925,19 @@
   "outputs": {
     "webAppName": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2019-10-01').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.name.value]"
     },
     "webAppPrincipalId": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2019-10-01').outputs.principalId.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.principalId.value]"
     },
     "webAppHostName": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2019-10-01').outputs.hostName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value]"
     },
     "endpointHostName": {
       "type": "string",
-      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2019-10-01').outputs.frontendEndpointHostName.value, reference(resourceId('Microsoft.Resources/deployments', 'cdnEndPointDeploy'), '2019-10-01').outputs.cdnEndpointHostName.value)]"
+      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontendEndpointHostName.value, reference(resourceId('Microsoft.Resources/deployments', 'cdnEndPointDeploy'), '2022-09-01').outputs.cdnEndpointHostName.value)]"
     }
   }
 }
