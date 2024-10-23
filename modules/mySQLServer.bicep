@@ -35,7 +35,7 @@ resource mySQLServer 'Microsoft.DBforMySQL/servers@2017-12-01' = {
   }
   properties: {
     createMode: 'Default'
-    version: '5.7'
+    version: '8.0'
     administratorLogin: administratorLogin
     administratorLoginPassword: administratorPassword
     sslEnforcement: 'Enabled'
