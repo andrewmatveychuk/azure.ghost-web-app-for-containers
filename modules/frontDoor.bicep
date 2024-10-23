@@ -21,11 +21,11 @@ var loadBalancing1Name = '${frontDoorName}-loadBalancing1'
 var routingRule1Name = '${frontDoorName}-routingRule1'
 var frontendEndpoint1hostName = '${frontDoorName}.azurefd.net'
 
-resource existingWebApp 'Microsoft.Web/sites@2020-09-01' existing = {
+resource existingWebApp 'Microsoft.Web/sites@2023-12-01' existing = {
   name: webAppName
 }
 
-resource frontDoor 'Microsoft.Network/frontDoors@2020-05-01' = {
+resource frontDoor 'Microsoft.Network/frontDoors@2021-06-01' = {
   name: frontDoorName
   location: 'global'
   properties: {
@@ -143,7 +143,7 @@ resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-
   }
 }
 
-resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2020-11-01' = {
+resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2024-02-01' = {
   name: wafPolicyName
   location: 'global'
   properties: {

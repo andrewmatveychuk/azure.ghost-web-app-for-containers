@@ -31,7 +31,7 @@ resource existingWebApp 'Microsoft.Web/sites@2020-09-01' existing = {
   name: webAppName
 }
 
-resource webAppSettings 'Microsoft.Web/sites/config@2021-01-15' = {
+resource webAppSettings 'Microsoft.Web/sites/config@2023-12-01' = {
   parent: existingWebApp
   name: 'appsettings'
   properties: {

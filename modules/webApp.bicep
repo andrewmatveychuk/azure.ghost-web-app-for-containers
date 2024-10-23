@@ -36,7 +36,7 @@ param deploymentConfiguration string
 
 var containerImageReference = 'DOCKER|${ghostContainerImage}'
 
-resource webApp 'Microsoft.Web/sites@2021-01-15' = {
+resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   name: webAppName
   location: location
   kind: 'app,linux,container'
@@ -70,7 +70,7 @@ resource webApp 'Microsoft.Web/sites@2021-01-15' = {
   }
 }
 
-resource siteConfig 'Microsoft.Web/sites/config@2021-01-15' = if (deploymentConfiguration == 'Web app with Azure Front Door') {
+resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = if (deploymentConfiguration == 'Web app with Azure Front Door') {
   parent: webApp
   name: 'web'
   properties: {

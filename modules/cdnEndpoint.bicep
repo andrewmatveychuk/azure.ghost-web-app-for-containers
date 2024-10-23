@@ -25,13 +25,13 @@ param webAppName string
 @description('Web app hostname to use in the endpoint')
 param webAppHostName string
 
-resource cdnProfile 'Microsoft.Cdn/profiles@2020-09-01' = {
+resource cdnProfile 'Microsoft.Cdn/profiles@2024-02-01' = {
   name: cdnProfileName
   location: location
   sku: cdnProfileSku
 }
 
-resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2020-09-01' = {
+resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2024-02-01' = {
   parent: cdnProfile
   name: cdnEndpointName
   location: location

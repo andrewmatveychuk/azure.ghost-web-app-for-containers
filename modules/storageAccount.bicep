@@ -20,7 +20,7 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace id to use for diagnostics settings')
 param logAnalyticsWorkspaceId string
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
   kind: 'StorageV2'
@@ -47,7 +47,7 @@ resource storageAccountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-0
   }
 }
 
-resource fileServices 'Microsoft.Storage/storageAccounts/fileServices@2021-04-01' = {
+resource fileServices 'Microsoft.Storage/storageAccounts/fileServices@2023-05-01' = {
   parent: storageAccount
   name: 'default'
 }
@@ -82,7 +82,7 @@ resource fileServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-
 
 // var fileShareName = '${storageAccount.name}/default/${fileShareFolderName}'
 
-resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2021-04-01' = {
+resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01' = {
   parent: fileServices
   name: fileShareFolderName
 }
