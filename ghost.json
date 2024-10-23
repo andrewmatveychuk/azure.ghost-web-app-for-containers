@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "1157641452157542666"
+      "templateHash": "3464106283937913910"
     }
   },
   "parameters": {
@@ -46,7 +46,7 @@
     },
     "mySQLServerSku": {
       "type": "string",
-      "defaultValue": "B_Gen5_1",
+      "defaultValue": "Standard_B1ms",
       "metadata": {
         "description": "MySQL server SKU"
       }
@@ -1190,7 +1190,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "8196189392936059756"
+              "templateHash": "7566262336140381835"
             }
           },
           "parameters": {
@@ -1202,8 +1202,8 @@
             "mySQLServerSku": {
               "type": "string",
               "allowedValues": [
-                "B_Gen5_1",
-                "B_Gen5_2"
+                "Standard_B1ms",
+                "Standard_B2ms"
               ]
             },
             "administratorLogin": {
@@ -1237,39 +1237,37 @@
           },
           "resources": [
             {
-              "type": "Microsoft.DBforMySQL/servers",
-              "apiVersion": "2017-12-01",
+              "type": "Microsoft.DBforMySQL/flexibleServers",
+              "apiVersion": "2024-02-01-preview",
               "name": "[parameters('mySQLServerName')]",
               "location": "[parameters('location')]",
               "sku": {
                 "name": "[parameters('mySQLServerSku')]",
-                "tier": "Basic"
+                "tier": "Burstable"
               },
               "properties": {
                 "createMode": "Default",
-                "version": "8.0",
+                "version": "8.0.21",
                 "administratorLogin": "[parameters('administratorLogin')]",
-                "administratorLoginPassword": "[parameters('administratorPassword')]",
-                "sslEnforcement": "Enabled",
-                "minimalTlsVersion": "TLS1_2"
+                "administratorLoginPassword": "[parameters('administratorPassword')]"
               }
             },
             {
-              "type": "Microsoft.DBforMySQL/servers/firewallRules",
-              "apiVersion": "2017-12-01",
+              "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules",
+              "apiVersion": "2023-12-30",
               "name": "[format('{0}/{1}', parameters('mySQLServerName'), 'AllowAzureIPs')]",
               "properties": {
                 "startIpAddress": "0.0.0.0",
                 "endIpAddress": "0.0.0.0"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.DBforMySQL/servers', parameters('mySQLServerName'))]"
+                "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]"
               ]
             },
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.DBforMySQL/servers/{0}', parameters('mySQLServerName'))]",
+              "scope": "[format('Microsoft.DBforMySQL/flexibleServers/{0}', parameters('mySQLServerName'))]",
               "name": "MySQLServerDiagnostics",
               "properties": {
                 "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
@@ -1291,7 +1289,7 @@
                 ]
               },
               "dependsOn": [
-                "[resourceId('Microsoft.DBforMySQL/servers', parameters('mySQLServerName'))]"
+                "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]"
               ]
             }
           ],
@@ -1302,7 +1300,7 @@
             },
             "fullyQualifiedDomainName": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.DBforMySQL/servers', parameters('mySQLServerName')), '2017-12-01').fullyQualifiedDomainName]"
+              "value": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2024-02-01-preview').fullyQualifiedDomainName]"
             }
           }
         }

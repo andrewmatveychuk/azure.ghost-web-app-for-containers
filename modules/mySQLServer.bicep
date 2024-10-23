@@ -5,8 +5,8 @@ targetScope = 'resourceGroup'
 param mySQLServerName string
 
 @allowed([
-  'B_Gen5_1'
-  'B_Gen5_2'
+  'Standard_B1ms'
+  'Standard_B2ms'
 ])
 param mySQLServerSku string
 
@@ -26,24 +26,22 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace id to use for diagnostics settings')
 param logAnalyticsWorkspaceId string
 
-resource mySQLServer 'Microsoft.DBforMySQL/servers@2017-12-01' = {
+resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2024-02-01-preview' = {
   name: mySQLServerName
   location: location
   sku: {
     name: mySQLServerSku
-    tier: 'Basic'
+    tier: 'Burstable'
   }
   properties: {
     createMode: 'Default'
-    version: '8.0'
+    version: '8.0.21'
     administratorLogin: administratorLogin
     administratorLoginPassword: administratorPassword
-    sslEnforcement: 'Enabled'
-    minimalTlsVersion: 'TLS1_2'
   }
 }
 
-resource firewallRules 'Microsoft.DBforMySQL/servers/firewallRules@2017-12-01' = {
+resource firewallRules 'Microsoft.DBforMySQL/flexibleServers/firewallRules@2023-12-30' = {
   parent: mySQLServer
   name: 'AllowAzureIPs'
   properties: {

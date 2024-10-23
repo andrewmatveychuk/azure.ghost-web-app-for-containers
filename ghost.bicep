@@ -16,7 +16,7 @@ param storageAccountSku string = 'Standard_LRS'
 param location string = resourceGroup().location
 
 @description('MySQL server SKU')
-param mySQLServerSku string = 'B_Gen5_1'
+param mySQLServerSku string = 'Standard_B1ms'
 
 @description('MySQL server password')
 @secure()
