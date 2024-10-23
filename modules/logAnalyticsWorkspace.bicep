@@ -7,13 +7,7 @@ param logAnalyticsWorkspaceName string
 
 @description('Log Analytics workspace pricing tier')
 @allowed([
-  'Free'
-  'LACluster'
   'PerGB2018'
-  'PerNode'
-  'Premium'
-  'Standalone'
-  'Standard'
 ])
 param logAnalyticsWorkspaceSku string
 
