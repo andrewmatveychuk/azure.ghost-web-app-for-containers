@@ -117,7 +117,8 @@ module webAppSettings 'modules/webAppSettings.bicep' = {
     containerRegistryUrl: containerRegistryUrl
     containerMountPath: ghostContentFilesMountPath
     databaseHostFQDN: mySQLServer.outputs.fullyQualifiedDomainName
-    databaseLogin: '${databaseLogin}@${mySQLServer.outputs.name}'
+    // databaseLogin: '${databaseLogin}@${mySQLServer.outputs.name}'
+    databaseLogin: databaseLogin
     databasePasswordSecretUri: keyVault.outputs.databasePasswordSecretUri
     databaseName: databaseName
     siteUrl: siteUrl
@@ -181,6 +182,7 @@ module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Web
 output webAppName string = webApp.outputs.name
 output webAppPrincipalId string = webApp.outputs.principalId
 output webAppHostName string = webApp.outputs.hostName
+output mySQLServerFQDN string = mySQLServer.outputs.fullyQualifiedDomainName
 
 var endpointHostName = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontendEndpointHostName : cdnEndpoint.outputs.cdnEndpointHostName
 
