@@ -26,7 +26,7 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace id to use for diagnostics settings')
 param logAnalyticsWorkspaceId string
 
-resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2024-02-01-preview' = {
+resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' = {
   name: mySQLServerName
   location: location
   sku: {
@@ -38,6 +38,7 @@ resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2024-02-01-preview' =
     version: '8.0.21'
     administratorLogin: administratorLogin
     administratorLoginPassword: administratorPassword
+
   }
 }
 
