@@ -52,7 +52,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       http20Enabled: true
       httpLoggingEnabled: true
-      minTlsVersion: '1.2'
+      minTlsVersion: '1.3'
       ftpsState: 'Disabled'
       linuxFxVersion: containerImageReference
       alwaysOn: true
@@ -86,6 +86,31 @@ resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = if (deploymentConf
     ]
   }
 }
+
+
+// Configuring virtual network integration
+@description('Virtual network for a private endpoint')
+param vNetName string
+@description('Target subnet to integrate web app')
+param webAppIntegrationSubnetName string
+
+resource vNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+  name: vNetName
+}
+
+resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+  name: webAppIntegrationSubnetName
+  parent: vNet
+}
+
+resource webApp_vNetIntegration 'Microsoft.Web/sites/networkConfig@2023-12-01' = {
+  parent: webApp
+  name: 'virtualNetwork'
+  properties: {
+    subnetResourceId: subnet.id
+  }
+}
+//End of configuring virtual network integration
 
 resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   scope: webApp

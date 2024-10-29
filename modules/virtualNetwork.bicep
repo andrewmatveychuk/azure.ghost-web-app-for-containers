@@ -2,37 +2,46 @@ targetScope = 'resourceGroup'
 
 @minLength(2)
 @maxLength(64)
-param virtualNetworkName string
+param vNetName string
+param vNetAddressPrefix string
 
+param webAppIntegrationSubnetName string
+param webAppIntegrationSubnetPrefix string
 
-
-param vnetAddressPrefix string = '10.0.0.0/26'
-param webAppSubnetPrefix string = '10.0.0.0/28'
-param privateLinksSubnetPrefix string = '10.0.0.16/28'
+param privateEndpointsSubnetName string
+param privateEndpointsSubnetPrefix string
 
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-01-01' = {
-  name: virtualNetworkName
+resource vNet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
+  name: vNetName
   location: location
   properties: {
     addressSpace: {
       addressPrefixes: [
-        vnetAddressPrefix
+        vNetAddressPrefix
       ]
     }
     subnets: [
       {
-        name: 'webAppIntegrationSubnet'
+        name: webAppIntegrationSubnetName
         properties: {
-          addressPrefix: webAppSubnetPrefix
+          addressPrefix: webAppIntegrationSubnetPrefix
+          delegations: [
+            {
+              name: 'delegation'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
         }
       }
       {
-        name: 'privateLinksSubnet'
+        name: privateEndpointsSubnetName
         properties: {
-          addressPrefix: privateLinksSubnetPrefix
+          addressPrefix: privateEndpointsSubnetPrefix
         }
       }
     ]
