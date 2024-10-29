@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "12307890243936856921"
+      "templateHash": "17974354022369813411"
     }
   },
   "parameters": {
@@ -264,7 +264,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "15181032315496030193"
+              "templateHash": "13473061345376051581"
             }
           },
           "parameters": {
@@ -305,13 +305,7 @@
                 }
               }
             }
-          ],
-          "outputs": {
-            "id": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
-            }
-          }
+          ]
         }
       }
     },
@@ -334,8 +328,8 @@
           "fileShareFolderName": {
             "value": "[variables('ghostContentFileShareName')]"
           },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -354,7 +348,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "16160540303655289639"
+              "templateHash": "4751577130592396654"
             }
           },
           "parameters": {
@@ -384,10 +378,10 @@
                 "description": "Location to deploy the resources"
               }
             },
-            "logAnalyticsWorkspaceId": {
+            "logAnalyticsWorkspaceName": {
               "type": "string",
               "metadata": {
-                "description": "Log Analytics workspace id to use for diagnostics settings"
+                "description": "Log Analytics workspace to use for diagnostics settings"
               }
             },
             "vNetName": {
@@ -430,7 +424,7 @@
               "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
               "name": "StorageAccountDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "metrics": [
                   {
                     "category": "Transaction",
@@ -456,7 +450,7 @@
               "scope": "[format('Microsoft.Storage/storageAccounts/{0}/fileServices/{1}', parameters('storageAccountName'), 'default')]",
               "name": "FileServicesDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "metrics": [
                   {
                     "category": "Transaction",
@@ -578,7 +572,6 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
@@ -601,8 +594,8 @@
           "keyVaultSecretValue": {
             "value": "[parameters('databasePassword')]"
           },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
           },
           "servicePrincipalId": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.principalId.value]"
@@ -624,7 +617,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "16086361169376995538"
+              "templateHash": "16736757807956809115"
             }
           },
           "parameters": {
@@ -657,10 +650,10 @@
                 "description": "Location to deploy the resources"
               }
             },
-            "logAnalyticsWorkspaceId": {
+            "logAnalyticsWorkspaceName": {
               "type": "string",
               "metadata": {
-                "description": "Log Analytics workspace id to use for diagnostics settings"
+                "description": "Log Analytics workspace to use for diagnostics settings"
               }
             },
             "servicePrincipalId": {
@@ -733,7 +726,7 @@
               "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
               "name": "KeyVaultDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "metrics": [
                   {
                     "category": "AllMetrics",
@@ -827,7 +820,6 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
       ]
@@ -866,8 +858,8 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
           },
           "deploymentConfiguration": {
             "value": "[parameters('deploymentConfiguration')]"
@@ -886,7 +878,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "8702433986495302209"
+              "templateHash": "415296617527667493"
             }
           },
           "parameters": {
@@ -908,10 +900,10 @@
                 "description": "App Service Plan id to host the app"
               }
             },
-            "logAnalyticsWorkspaceId": {
+            "logAnalyticsWorkspaceName": {
               "type": "string",
               "metadata": {
-                "description": "Log Analytics workspace id to use for diagnostics settings"
+                "description": "Log Analytics workspace to use for diagnostics settings"
               }
             },
             "ghostContainerImage": {
@@ -1038,7 +1030,7 @@
               "scope": "[format('Microsoft.Web/sites/{0}', parameters('webAppName'))]",
               "name": "WebAppDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "metrics": [
                   {
                     "category": "AllMetrics",
@@ -1095,7 +1087,6 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'appServicePlanDeploy')]",
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy')]"
       ]
     },
@@ -1257,8 +1248,8 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
           }
         },
         "template": {
@@ -1268,7 +1259,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "10202638106621394855"
+              "templateHash": "16756395164030632634"
             }
           },
           "parameters": {
@@ -1304,10 +1295,10 @@
                 "description": "Location to deploy the resources"
               }
             },
-            "logAnalyticsWorkspaceId": {
+            "logAnalyticsWorkspaceName": {
               "type": "string",
               "metadata": {
-                "description": "Log Analytics workspace id to use for diagnostics settings"
+                "description": "Log Analytics workspace to use for diagnostics settings"
               }
             }
           },
@@ -1331,7 +1322,7 @@
               "scope": "[format('Microsoft.Web/serverfarms/{0}', parameters('appServicePlanName'))]",
               "name": "AppServicePlanDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "metrics": [
                   {
                     "category": "AllMetrics",
@@ -1353,7 +1344,6 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
@@ -1373,8 +1363,8 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
           }
         },
         "template": {
@@ -1384,7 +1374,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "13650465676127332492"
+              "templateHash": "16407146013265302405"
             }
           },
           "parameters": {
@@ -1403,10 +1393,10 @@
                 "description": "Location to deploy the resources"
               }
             },
-            "logAnalyticsWorkspaceId": {
+            "logAnalyticsWorkspaceName": {
               "type": "string",
               "metadata": {
-                "description": "Log Analytics workspace id to use for diagnostics settings"
+                "description": "Log Analytics workspace to use for diagnostics settings"
               }
             }
           },
@@ -1419,7 +1409,7 @@
               "kind": "web",
               "properties": {
                 "Application_Type": "web",
-                "WorkspaceResourceId": "[parameters('logAnalyticsWorkspaceId')]"
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
               }
             },
             {
@@ -1428,7 +1418,7 @@
               "scope": "[format('Microsoft.Insights/components/{0}', parameters('applicationInsightsName'))]",
               "name": "InsightsDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "metrics": [
                   {
                     "category": "AllMetrics",
@@ -1498,10 +1488,7 @@
             }
           }
         }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]"
-      ]
+      }
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1522,8 +1509,8 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
           },
           "mySQLServerName": {
             "value": "[variables('mySQLServerName')]"
@@ -1545,7 +1532,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "3287740872910596525"
+              "templateHash": "16695314290839249604"
             }
           },
           "parameters": {
@@ -1581,10 +1568,10 @@
                 "description": "Location to deploy the resources"
               }
             },
-            "logAnalyticsWorkspaceId": {
+            "logAnalyticsWorkspaceName": {
               "type": "string",
               "metadata": {
-                "description": "Log Analytics workspace id to use for diagnostics settings"
+                "description": "Log Analytics workspace to use for diagnostics settings"
               }
             },
             "vNetName": {
@@ -1631,7 +1618,7 @@
               "scope": "[format('Microsoft.DBforMySQL/flexibleServers/{0}', parameters('mySQLServerName'))]",
               "name": "MySQLServerDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "metrics": [
                   {
                     "category": "AllMetrics",
@@ -1733,7 +1720,6 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
@@ -1760,8 +1746,8 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
           },
           "webAppName": {
             "value": "webAppDeploy"
@@ -1777,7 +1763,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "15096346549318610644"
+              "templateHash": "12494414591420763910"
             }
           },
           "parameters": {
@@ -1810,10 +1796,10 @@
                 "description": "Location to deploy the resources"
               }
             },
-            "logAnalyticsWorkspaceId": {
+            "logAnalyticsWorkspaceName": {
               "type": "string",
               "metadata": {
-                "description": "Log Analytics workspace id to use for diagnostics settings"
+                "description": "Log Analytics workspace to use for diagnostics settings"
               }
             },
             "webAppName": {
@@ -1911,7 +1897,7 @@
               "scope": "[format('Microsoft.Cdn/profiles/{0}/endpoints/{1}', parameters('cdnProfileName'), parameters('cdnEndpointName'))]",
               "name": "CDNEndpointDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "logs": [
                   {
                     "category": "CoreAnalytics",
@@ -1929,7 +1915,7 @@
               "scope": "[format('Microsoft.Cdn/profiles/{0}', parameters('cdnProfileName'))]",
               "name": "CDNProfileDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "metrics": [
                   {
                     "category": "AllMetrics",
@@ -1961,7 +1947,6 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
       ]
     },
@@ -1982,8 +1967,8 @@
           "wafPolicyName": {
             "value": "[variables('wafPolicyName')]"
           },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy'), '2022-09-01').outputs.id.value]"
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
           },
           "webAppName": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.name.value]"
@@ -1996,7 +1981,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "18413070533996151616"
+              "templateHash": "14278063683759801272"
             }
           },
           "parameters": {
@@ -2010,10 +1995,10 @@
               "minLength": 1,
               "maxLength": 128
             },
-            "logAnalyticsWorkspaceId": {
+            "logAnalyticsWorkspaceName": {
               "type": "string",
               "metadata": {
-                "description": "Log Analytics workspace id to use for diagnostics settings"
+                "description": "Log Analytics workspace to use for diagnostics settings"
               }
             },
             "webAppName": {
@@ -2136,7 +2121,7 @@
               "scope": "[format('Microsoft.Network/frontDoors/{0}', parameters('frontDoorName'))]",
               "name": "FrontDoorDiagnostics",
               "properties": {
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
                 "metrics": [
                   {
                     "category": "AllMetrics",
@@ -2188,7 +2173,6 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
       ]
     }

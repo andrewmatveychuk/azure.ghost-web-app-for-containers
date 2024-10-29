@@ -23,5 +23,3 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09
     }
   }
 }
-
-output id string = logAnalyticsWorkspace.id

@@ -16,8 +16,8 @@ param cdnEndpointName string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-@description('Log Analytics workspace id to use for diagnostics settings')
-param logAnalyticsWorkspaceId string
+@description('Log Analytics workspace to use for diagnostics settings')
+param logAnalyticsWorkspaceName string
 
 @description('Web app to confire endpoint for')
 param webAppName string
@@ -96,11 +96,15 @@ resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2024-02-01' = {
   }
 }
 
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-10-01' existing = {
+  name: logAnalyticsWorkspaceName
+}
+
 resource cdnEndpointDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   scope: cdnEndpoint
   name: 'CDNEndpointDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     logs: [
       {
         category: 'CoreAnalytics'
@@ -114,7 +118,7 @@ resource cdnProfileDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01
   scope: cdnProfile
   name: 'CDNProfileDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'

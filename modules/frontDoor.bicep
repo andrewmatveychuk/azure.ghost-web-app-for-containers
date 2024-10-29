@@ -8,8 +8,8 @@ param frontDoorName string
 @maxLength(128)
 param wafPolicyName string
 
-@description('Log Analytics workspace id to use for diagnostics settings')
-param logAnalyticsWorkspaceId string
+@description('Log Analytics workspace to use for diagnostics settings')
+param logAnalyticsWorkspaceName string
 
 @description('Web app to confire Front Door for')
 param webAppName string
@@ -119,11 +119,15 @@ resource frontDoor 'Microsoft.Network/frontDoors@2021-06-01' = {
   }
 }
 
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-10-01' existing = {
+  name: logAnalyticsWorkspaceName
+}
+
 resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   scope: frontDoor
   name: 'FrontDoorDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'

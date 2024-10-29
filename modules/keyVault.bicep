@@ -17,8 +17,8 @@ param keyVaultSecretValue string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-@description('Log Analytics workspace id to use for diagnostics settings')
-param logAnalyticsWorkspaceId string
+@description('Log Analytics workspace to use for diagnostics settings')
+param logAnalyticsWorkspaceName string
 
 @description('Service principal ID to provide access to the vault secrets')
 param servicePrincipalId string
@@ -58,11 +58,15 @@ resource keyVaultSecret 'Microsoft.KeyVault/vaults/secrets@2024-04-01-preview' =
   }
 }
 
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-10-01' existing = {
+  name: logAnalyticsWorkspaceName
+}
+
 resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   scope: keyVault
   name: 'KeyVaultDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'

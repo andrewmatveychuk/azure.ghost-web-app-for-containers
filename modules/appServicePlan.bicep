@@ -22,8 +22,8 @@ param appServicePlanSku string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-@description('Log Analytics workspace id to use for diagnostics settings')
-param logAnalyticsWorkspaceId string
+@description('Log Analytics workspace to use for diagnostics settings')
+param logAnalyticsWorkspaceName string
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: appServicePlanName
@@ -37,11 +37,15 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   }
 }
 
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-10-01' existing = {
+  name: logAnalyticsWorkspaceName
+}
+
 resource appServicePlanDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   scope: appServicePlan
   name: 'AppServicePlanDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'

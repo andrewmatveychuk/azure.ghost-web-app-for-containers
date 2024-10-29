@@ -99,7 +99,7 @@ module storageAccount 'modules/storageAccount.bicep' = {
     storageAccountName: storageAccountName
     storageAccountSku: storageAccountSku
     fileShareFolderName: ghostContentFileShareName
-    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     location: location
     vNetName: vNetName
     privateEndpointsSubnetName: privateEndpointsSubnetName
@@ -115,7 +115,7 @@ module keyVault './modules/keyVault.bicep' = {
     keyVaultName: keyVaultName
     keyVaultSecretName: 'databasePassword'
     keyVaultSecretValue: databasePassword
-    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     servicePrincipalId: webApp.outputs.principalId
     location: location
     vNetName: vNetName
@@ -137,7 +137,7 @@ module webApp './modules/webApp.bicep' = {
     fileShareName: ghostContentFileShareName
     containerMountPath: ghostContentFilesMountPath
     location: location
-    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     deploymentConfiguration: deploymentConfiguration
     vNetName: vNetName
     webAppIntegrationSubnetName: webAppIntegrationSubnetName
@@ -173,7 +173,7 @@ module appServicePlan './modules/appServicePlan.bicep' = {
     appServicePlanName: appServicePlanName
     appServicePlanSku: appServicePlanSku
     location: location
-    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
   }
   dependsOn: [
     vNet
@@ -185,7 +185,7 @@ module applicationInsights './modules/applicationInsights.bicep' = {
   params: {
     applicationInsightsName: applicationInsightsName
     location: location
-    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
   }
 }
 
@@ -195,7 +195,7 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
     administratorLogin: databaseLogin
     administratorPassword: databasePassword
     location: location
-    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     mySQLServerName: mySQLServerName
     mySQLServerSku: mySQLServerSku
     vNetName: vNetName
@@ -213,7 +213,7 @@ module cdnEndpoint './modules/cdnEndpoint.bicep' = if (deploymentConfiguration =
     cdnProfileSku: cdnProfileSku
     cdnEndpointName: cdnEndpointName
     location: location
-    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     webAppName: webApp.name
     webAppHostName: webApp.outputs.hostName
   }
@@ -224,7 +224,7 @@ module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Web
   params: {
     frontDoorName: frontDoorName
     wafPolicyName: wafPolicyName
-    logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     webAppName: webApp.outputs.name
   }
 }
