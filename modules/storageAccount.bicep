@@ -17,8 +17,8 @@ param fileShareFolderName string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-@description('Log Analytics workspace id to use for diagnostics settings')
-param logAnalyticsWorkspaceId string
+@description('Log Analytics workspace to use for diagnostics settings')
+param logAnalyticsWorkspaceName string
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
@@ -34,11 +34,15 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-10-01' existing = {
+  name: logAnalyticsWorkspaceName
+}
+
 resource storageAccountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   scope: storageAccount
   name: 'StorageAccountDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     metrics: [
       {
         category: 'Transaction'
@@ -57,7 +61,7 @@ resource fileServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-
   scope: fileServices
   name: 'FileServicesDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     metrics: [
       {
         category: 'Transaction'

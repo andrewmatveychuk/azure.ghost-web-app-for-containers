@@ -8,8 +8,12 @@ param applicationInsightsName string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-@description('Log Analytics workspace id to use for diagnostics settings')
-param logAnalyticsWorkspaceId string
+@description('Log Analytics workspace to use for diagnostics settings')
+param logAnalyticsWorkspaceName string
+
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-10-01' existing = {
+  name: logAnalyticsWorkspaceName
+}
 
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: applicationInsightsName
@@ -17,7 +21,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   kind: 'web'
   properties: {
     Application_Type: 'web'
-    WorkspaceResourceId: logAnalyticsWorkspaceId
+    WorkspaceResourceId: logAnalyticsWorkspace.id
   }
 }
 
@@ -25,7 +29,7 @@ resource applicationInsightsDiagnostics 'Microsoft.Insights/diagnosticSettings@2
   scope: applicationInsights
   name: 'InsightsDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'

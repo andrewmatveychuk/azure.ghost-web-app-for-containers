@@ -10,8 +10,8 @@ param location string = resourceGroup().location
 @description('App Service Plan id to host the app')
 param appServicePlanId string
 
-@description('Log Analytics workspace id to use for diagnostics settings')
-param logAnalyticsWorkspaceId string
+@description('Log Analytics workspace to use for diagnostics settings')
+param logAnalyticsWorkspaceName string
 
 @description('Ghost container full image name and tag')
 param ghostContainerImage string
@@ -112,11 +112,16 @@ resource webApp_vNetIntegration 'Microsoft.Web/sites/networkConfig@2023-12-01' =
 }
 //End of configuring virtual network integration
 
+
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-10-01' existing = {
+  name: logAnalyticsWorkspaceName
+}
+
 resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   scope: webApp
   name: 'WebAppDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'

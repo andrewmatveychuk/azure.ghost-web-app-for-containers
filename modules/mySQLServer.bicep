@@ -21,8 +21,8 @@ param administratorPassword string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-@description('Log Analytics workspace id to use for diagnostics settings')
-param logAnalyticsWorkspaceId string
+@description('Log Analytics workspace to use for diagnostics settings')
+param logAnalyticsWorkspaceName string
 
 resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' = {
   name: mySQLServerName
@@ -42,11 +42,15 @@ resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' = {
   }
 }
 
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-10-01' existing = {
+  name: logAnalyticsWorkspaceName
+}
+
 resource mySQLServerDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   scope: mySQLServer
   name: 'MySQLServerDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspaceId
+    workspaceId: logAnalyticsWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'
