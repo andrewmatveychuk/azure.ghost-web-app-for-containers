@@ -130,5 +130,5 @@ resource cdnProfileDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01
   }
 }
 
-output cdnEndpointOrigin string = cdnEndpoint.properties.hostName
-output cdnEndpointHostName string = cdnEndpoint.properties.originHostHeader
+output cdnEndpointHostName string = cdnEndpoint.properties.hostName
+output cdnEndpointOriginHostHeader string = cdnEndpoint.properties.originHostHeader

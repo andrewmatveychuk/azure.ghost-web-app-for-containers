@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "3464106283937913910"
+      "templateHash": "12307890243936856921"
     }
   },
   "parameters": {
@@ -73,14 +73,38 @@
     },
     "deploymentConfiguration": {
       "type": "string",
-      "defaultValue": "Web app with Azure Front Door",
+      "defaultValue": "Web app with Azure CDN",
       "allowedValues": [
         "Web app with Azure CDN",
         "Web app with Azure Front Door"
       ]
+    },
+    "vnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/26",
+      "metadata": {
+        "description": "Virtual network address prefix to use"
+      }
+    },
+    "webAppIntegrationSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/28",
+      "metadata": {
+        "description": "Address prefix for web app integration subnet"
+      }
+    },
+    "privateEndpointsSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.16/28",
+      "metadata": {
+        "description": "Address prefix for private links subnet"
+      }
     }
   },
   "variables": {
+    "vNetName": "[format('{0}-vnet-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
+    "privateEndpointsSubnetName": "privateEndpointsSubnet",
+    "webAppIntegrationSubnetName": "webAppIntegrationSubnet",
     "webAppName": "[format('{0}-web-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
     "appServicePlanName": "[format('{0}-asp-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
     "logAnalyticsWorkspaceName": "[format('{0}-la-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
@@ -102,6 +126,117 @@
     "wafPolicyName": "[format('{0}waf{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]"
   },
   "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vNetDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "vNetAddressPrefix": {
+            "value": "[parameters('vnetAddressPrefix')]"
+          },
+          "privateEndpointsSubnetName": {
+            "value": "[variables('privateEndpointsSubnetName')]"
+          },
+          "privateEndpointsSubnetPrefix": {
+            "value": "[parameters('privateEndpointsSubnetPrefix')]"
+          },
+          "webAppIntegrationSubnetName": {
+            "value": "[variables('webAppIntegrationSubnetName')]"
+          },
+          "webAppIntegrationSubnetPrefix": {
+            "value": "[parameters('webAppIntegrationSubnetPrefix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.30.23.60470",
+              "templateHash": "13276601988336369726"
+            }
+          },
+          "parameters": {
+            "vNetName": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 64
+            },
+            "vNetAddressPrefix": {
+              "type": "string"
+            },
+            "webAppIntegrationSubnetName": {
+              "type": "string"
+            },
+            "webAppIntegrationSubnetPrefix": {
+              "type": "string"
+            },
+            "privateEndpointsSubnetName": {
+              "type": "string"
+            },
+            "privateEndpointsSubnetPrefix": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location to deploy the resources"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('vNetName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('vNetAddressPrefix')]"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "[parameters('webAppIntegrationSubnetName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('webAppIntegrationSubnetPrefix')]",
+                      "delegations": [
+                        {
+                          "name": "delegation",
+                          "properties": {
+                            "serviceName": "Microsoft.Web/serverFarms"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "[parameters('privateEndpointsSubnetName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('privateEndpointsSubnetPrefix')]"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -204,6 +339,12 @@
           },
           "location": {
             "value": "[parameters('location')]"
+          },
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "privateEndpointsSubnetName": {
+            "value": "[variables('privateEndpointsSubnetName')]"
           }
         },
         "template": {
@@ -213,7 +354,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "16493484993944252180"
+              "templateHash": "16160540303655289639"
             }
           },
           "parameters": {
@@ -248,7 +389,24 @@
               "metadata": {
                 "description": "Log Analytics workspace id to use for diagnostics settings"
               }
+            },
+            "vNetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network for a private endpoint"
+              }
+            },
+            "privateEndpointsSubnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Target subnet to create a private endpoint"
+              }
             }
+          },
+          "variables": {
+            "privateEndpointName": "[format('ghost-pl-file-{0}', uniqueString(resourceGroup().id))]",
+            "privateDnsZoneName": "[format('privatelink.file.{0}', environment().suffixes.storage)]",
+            "pvtEndpointDnsGroupName": "[format('{0}/file', variables('privateEndpointName'))]"
           },
           "resources": [
             {
@@ -262,7 +420,8 @@
               },
               "properties": {
                 "supportsHttpsTrafficOnly": true,
-                "minimumTlsVersion": "TLS1_2"
+                "minimumTlsVersion": "TLS1_2",
+                "publicNetworkAccess": "Disabled"
               }
             },
             {
@@ -330,6 +489,72 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]"
               ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[variables('privateDnsZoneName')]",
+              "location": "global",
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', variables('privateDnsZoneName')))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vNetName'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('privateEndpointName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('privateEndpointsSubnetName'))]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[variables('privateEndpointName')]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+                      "groupIds": [
+                        "file"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('pvtEndpointDnsGroupName')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]",
+                "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -353,7 +578,8 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]"
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
     {
@@ -383,6 +609,12 @@
           },
           "location": {
             "value": "[parameters('location')]"
+          },
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "privateEndpointsSubnetName": {
+            "value": "[variables('privateEndpointsSubnetName')]"
           }
         },
         "template": {
@@ -392,7 +624,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "522170840616035080"
+              "templateHash": "16086361169376995538"
             }
           },
           "parameters": {
@@ -436,7 +668,24 @@
               "metadata": {
                 "description": "Service principal ID to provide access to the vault secrets"
               }
+            },
+            "vNetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network for a private endpoint"
+              }
+            },
+            "privateEndpointsSubnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Target subnet to create a private endpoint"
+              }
             }
+          },
+          "variables": {
+            "privateEndpointName": "[format('ghost-pl-kv-{0}', uniqueString(resourceGroup().id))]",
+            "privateDnsZoneName": "privatelink.vaultcore.azure.net",
+            "pvtEndpointDnsGroupName": "[format('{0}/keyvault', variables('privateEndpointName'))]"
           },
           "resources": [
             {
@@ -460,6 +709,10 @@
                 "sku": {
                   "name": "standard",
                   "family": "A"
+                },
+                "publicNetworkAccess": "Disabled",
+                "networkAcls": {
+                  "bypass": "None"
                 }
               }
             },
@@ -497,6 +750,72 @@
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
               ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[variables('privateDnsZoneName')]",
+              "location": "global",
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', variables('privateDnsZoneName')))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vNetName'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('privateEndpointName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('privateEndpointsSubnetName'))]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[variables('privateEndpointName')]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+                      "groupIds": [
+                        "vault"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('pvtEndpointDnsGroupName')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]",
+                "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -509,6 +828,7 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
       ]
     },
@@ -551,6 +871,12 @@
           },
           "deploymentConfiguration": {
             "value": "[parameters('deploymentConfiguration')]"
+          },
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "webAppIntegrationSubnetName": {
+            "value": "[variables('webAppIntegrationSubnetName')]"
           }
         },
         "template": {
@@ -560,7 +886,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "2698691435579598416"
+              "templateHash": "8702433986495302209"
             }
           },
           "parameters": {
@@ -621,6 +947,18 @@
                 "Web app with Azure CDN",
                 "Web app with Azure Front Door"
               ]
+            },
+            "vNetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network for a private endpoint"
+              }
+            },
+            "webAppIntegrationSubnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Target subnet to integrate web app"
+              }
             }
           },
           "variables": {
@@ -645,7 +983,7 @@
                 "siteConfig": {
                   "http20Enabled": true,
                   "httpLoggingEnabled": true,
-                  "minTlsVersion": "1.2",
+                  "minTlsVersion": "1.3",
                   "ftpsState": "Disabled",
                   "linuxFxVersion": "[variables('containerImageReference')]",
                   "alwaysOn": true,
@@ -678,6 +1016,17 @@
                     "description": "Rule for access from Azure Front Door"
                   }
                 ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites/networkConfig",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', parameters('webAppName'), 'virtualNetwork')]",
+              "properties": {
+                "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('webAppIntegrationSubnetName'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
@@ -779,7 +1128,7 @@
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'mySQLServerDeploy'), '2022-09-01').outputs.fullyQualifiedDomainName.value]"
           },
           "databaseLogin": {
-            "value": "[format('{0}@{1}', variables('databaseLogin'), reference(resourceId('Microsoft.Resources/deployments', 'mySQLServerDeploy'), '2022-09-01').outputs.name.value)]"
+            "value": "[variables('databaseLogin')]"
           },
           "databasePasswordSecretUri": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVaultDeploy'), '2022-09-01').outputs.databasePasswordSecretUri.value]"
@@ -798,7 +1147,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "8499576830861399392"
+              "templateHash": "15634036890596425162"
             }
           },
           "parameters": {
@@ -876,8 +1225,7 @@
                 "database__connection__user": "[parameters('databaseLogin')]",
                 "database__connection__password": "[format('@Microsoft.KeyVault(SecretUri={0})', parameters('databasePasswordSecretUri'))]",
                 "database__connection__database": "[parameters('databaseName')]",
-                "database__connection__ssl": "true",
-                "database__connection__ssl_minVersion": "TLSv1.2"
+                "database__connection__ssl__ca": "-----BEGIN CERTIFICATE-----\r\nMIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\r\nMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\nd3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD\r\nQTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT\r\nMRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\r\nb20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG\r\n9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB\r\nCSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97\r\nnh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt\r\n43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P\r\nT19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4\r\ngdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO\r\nBgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR\r\nTLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw\r\nDQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr\r\nhMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg\r\n06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF\r\nPnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls\r\nYSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk\r\nCAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=\r\n-----END CERTIFICATE-----"
               }
             }
           ]
@@ -1005,7 +1353,8 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]"
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
     {
@@ -1181,6 +1530,12 @@
           },
           "mySQLServerSku": {
             "value": "[parameters('mySQLServerSku')]"
+          },
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "privateEndpointsSubnetName": {
+            "value": "[variables('privateEndpointsSubnetName')]"
           }
         },
         "template": {
@@ -1190,7 +1545,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "7566262336140381835"
+              "templateHash": "3287740872910596525"
             }
           },
           "parameters": {
@@ -1215,8 +1570,6 @@
             },
             "administratorPassword": {
               "type": "securestring",
-              "minLength": 8,
-              "maxLength": 128,
               "metadata": {
                 "description": "Database administrator password"
               }
@@ -1233,12 +1586,29 @@
               "metadata": {
                 "description": "Log Analytics workspace id to use for diagnostics settings"
               }
+            },
+            "vNetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network for a private endpoint"
+              }
+            },
+            "privateEndpointsSubnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Target subnet to create a private endpoint"
+              }
             }
+          },
+          "variables": {
+            "privateEndpointName": "[format('ghost-pl-mysql-{0}', uniqueString(resourceGroup().id))]",
+            "privateDnsZoneName": "privatelink.mysql.database.azure.com",
+            "pvtEndpointDnsGroupName": "[format('{0}/mysql', variables('privateEndpointName'))]"
           },
           "resources": [
             {
               "type": "Microsoft.DBforMySQL/flexibleServers",
-              "apiVersion": "2024-02-01-preview",
+              "apiVersion": "2023-12-30",
               "name": "[parameters('mySQLServerName')]",
               "location": "[parameters('location')]",
               "sku": {
@@ -1249,20 +1619,11 @@
                 "createMode": "Default",
                 "version": "8.0.21",
                 "administratorLogin": "[parameters('administratorLogin')]",
-                "administratorLoginPassword": "[parameters('administratorPassword')]"
+                "administratorLoginPassword": "[parameters('administratorPassword')]",
+                "network": {
+                  "publicNetworkAccess": "Disabled"
+                }
               }
-            },
-            {
-              "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules",
-              "apiVersion": "2023-12-30",
-              "name": "[format('{0}/{1}', parameters('mySQLServerName'), 'AllowAzureIPs')]",
-              "properties": {
-                "startIpAddress": "0.0.0.0",
-                "endIpAddress": "0.0.0.0"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]"
-              ]
             },
             {
               "type": "Microsoft.Insights/diagnosticSettings",
@@ -1291,6 +1652,72 @@
               "dependsOn": [
                 "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]"
               ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('privateEndpointName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('privateEndpointsSubnetName'))]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[variables('privateEndpointName')]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]",
+                      "groupIds": [
+                        "mysqlServer"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[variables('privateDnsZoneName')]",
+              "location": "global",
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', variables('privateDnsZoneName')))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vNetName'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('pvtEndpointDnsGroupName')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]",
+                "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -1300,13 +1727,14 @@
             },
             "fullyQualifiedDomainName": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2024-02-01-preview').fullyQualifiedDomainName]"
+              "value": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2023-12-30').fullyQualifiedDomainName]"
             }
           }
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]"
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
     {
@@ -1349,7 +1777,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "17819951967714538982"
+              "templateHash": "15096346549318610644"
             }
           },
           "parameters": {
@@ -1521,11 +1949,11 @@
             }
           ],
           "outputs": {
-            "cdnEndpointOrigin": {
+            "cdnEndpointHostName": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName')), '2024-02-01').hostName]"
             },
-            "cdnEndpointHostName": {
+            "cdnEndpointOriginHostHeader": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName')), '2024-02-01').originHostHeader]"
             }
@@ -1777,6 +2205,10 @@
     "webAppHostName": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value]"
+    },
+    "mySQLServerFQDN": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'mySQLServerDeploy'), '2022-09-01').outputs.fullyQualifiedDomainName.value]"
     },
     "endpointHostName": {
       "type": "string",

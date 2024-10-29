@@ -32,8 +32,18 @@ param containerRegistryUrl string = 'https://index.docker.io/v1'
   'Web app with Azure CDN'
   'Web app with Azure Front Door'
 ])
-param deploymentConfiguration string = 'Web app with Azure Front Door'
+param deploymentConfiguration string = 'Web app with Azure CDN'
 
+@description('Virtual network address prefix to use')
+param vnetAddressPrefix string = '10.0.0.0/26'
+@description('Address prefix for web app integration subnet')
+param webAppIntegrationSubnetPrefix string = '10.0.0.0/28'
+@description('Address prefix for private links subnet')
+param privateEndpointsSubnetPrefix string = '10.0.0.16/28'
+
+var vNetName = '${applicationNamePrefix}-vnet-${uniqueString(resourceGroup().id)}'
+var privateEndpointsSubnetName = 'privateEndpointsSubnet'
+var webAppIntegrationSubnetName = 'webAppIntegrationSubnet'
 var webAppName = '${applicationNamePrefix}-web-${uniqueString(resourceGroup().id)}'
 var appServicePlanName = '${applicationNamePrefix}-asp-${uniqueString(resourceGroup().id)}'
 var logAnalyticsWorkspaceName = '${applicationNamePrefix}-la-${uniqueString(resourceGroup().id)}'
@@ -60,6 +70,20 @@ var cdnProfileSku = {
 var frontDoorName = '${applicationNamePrefix}-fd-${uniqueString(resourceGroup().id)}'
 var wafPolicyName = '${applicationNamePrefix}waf${uniqueString(resourceGroup().id)}'
 
+module vNet 'modules/virtualNetwork.bicep' = {
+  name: 'vNetDeploy'
+  params: {
+    vNetName: vNetName
+    vNetAddressPrefix: vnetAddressPrefix
+    privateEndpointsSubnetName: privateEndpointsSubnetName
+    privateEndpointsSubnetPrefix: privateEndpointsSubnetPrefix
+    webAppIntegrationSubnetName: webAppIntegrationSubnetName
+    webAppIntegrationSubnetPrefix: webAppIntegrationSubnetPrefix
+    location: location
+  }
+
+}
+
 module logAnalyticsWorkspace './modules/logAnalyticsWorkspace.bicep' = {
   name: 'logAnalyticsWorkspaceDeploy'
   params: {
@@ -77,7 +101,12 @@ module storageAccount 'modules/storageAccount.bicep' = {
     fileShareFolderName: ghostContentFileShareName
     logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
     location: location
+    vNetName: vNetName
+    privateEndpointsSubnetName: privateEndpointsSubnetName
   }
+  dependsOn: [
+    vNet
+  ]
 }
 
 module keyVault './modules/keyVault.bicep' = {
@@ -89,7 +118,12 @@ module keyVault './modules/keyVault.bicep' = {
     logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
     servicePrincipalId: webApp.outputs.principalId
     location: location
+    vNetName: vNetName
+    privateEndpointsSubnetName: privateEndpointsSubnetName
   }
+  dependsOn: [
+    vNet
+  ]
 }
 
 module webApp './modules/webApp.bicep' = {
@@ -105,7 +139,12 @@ module webApp './modules/webApp.bicep' = {
     location: location
     logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
     deploymentConfiguration: deploymentConfiguration
+    vNetName: vNetName
+    webAppIntegrationSubnetName: webAppIntegrationSubnetName
   }
+  dependsOn: [
+    appServicePlan
+  ]
 }
 
 module webAppSettings 'modules/webAppSettings.bicep' = {
@@ -117,11 +156,15 @@ module webAppSettings 'modules/webAppSettings.bicep' = {
     containerRegistryUrl: containerRegistryUrl
     containerMountPath: ghostContentFilesMountPath
     databaseHostFQDN: mySQLServer.outputs.fullyQualifiedDomainName
-    databaseLogin: '${databaseLogin}@${mySQLServer.outputs.name}'
+    // databaseLogin: '${databaseLogin}@${mySQLServer.outputs.name}'
+    databaseLogin: databaseLogin
     databasePasswordSecretUri: keyVault.outputs.databasePasswordSecretUri
     databaseName: databaseName
     siteUrl: siteUrl
   }
+  dependsOn: [
+    webApp
+  ]
 }
 
 module appServicePlan './modules/appServicePlan.bicep' = {
@@ -132,6 +175,9 @@ module appServicePlan './modules/appServicePlan.bicep' = {
     location: location
     logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
   }
+  dependsOn: [
+    vNet
+  ]
 }
 
 module applicationInsights './modules/applicationInsights.bicep' = {
@@ -152,7 +198,12 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
     logAnalyticsWorkspaceId: logAnalyticsWorkspace.outputs.id
     mySQLServerName: mySQLServerName
     mySQLServerSku: mySQLServerSku
+    vNetName: vNetName
+    privateEndpointsSubnetName: privateEndpointsSubnetName
   }
+  dependsOn: [
+    vNet
+  ]
 }
 
 module cdnEndpoint './modules/cdnEndpoint.bicep' = if (deploymentConfiguration == 'Web app with Azure CDN') {
@@ -181,6 +232,7 @@ module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Web
 output webAppName string = webApp.outputs.name
 output webAppPrincipalId string = webApp.outputs.principalId
 output webAppHostName string = webApp.outputs.hostName
+output mySQLServerFQDN string = mySQLServer.outputs.fullyQualifiedDomainName
 
 var endpointHostName = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontendEndpointHostName : cdnEndpoint.outputs.cdnEndpointHostName
 
