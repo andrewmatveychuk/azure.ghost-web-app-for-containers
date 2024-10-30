@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "6522196404850703665"
+      "templateHash": "11607896624849861485"
     }
   },
   "parameters": {
@@ -73,9 +73,9 @@
     },
     "deploymentConfiguration": {
       "type": "string",
-      "defaultValue": "Web app with Azure CDN",
+      "defaultValue": "Web app only",
       "allowedValues": [
-        "Web app with Azure CDN",
+        "Web app only",
         "Web app with Azure Front Door"
       ]
     },
@@ -116,12 +116,7 @@
     "databaseName": "ghost",
     "ghostContentFileShareName": "contentfiles",
     "ghostContentFilesMountPath": "/var/lib/ghost/content_files",
-    "siteUrl": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), format('https://{0}.azurefd.net', variables('frontDoorName')), format('https://{0}.azureedge.net', variables('cdnEndpointName')))]",
-    "cdnProfileName": "[format('{0}-cdnp-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "cdnEndpointName": "[format('{0}-cdne-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "cdnProfileSku": {
-      "name": "Standard_Microsoft"
-    },
+    "siteUrl": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), format('https://{0}.azurefd.net', variables('frontDoorName')), format('https://{0}.azurewebsites.net', variables('webAppName')))]",
     "frontDoorName": "[format('{0}-fd-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
     "wafPolicyName": "[format('{0}waf{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]"
   },
@@ -892,7 +887,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "415296617527667493"
+              "templateHash": "13423302285459963924"
             }
           },
           "parameters": {
@@ -950,7 +945,7 @@
             "deploymentConfiguration": {
               "type": "string",
               "allowedValues": [
-                "Web app with Azure CDN",
+                "Web app only",
                 "Web app with Azure Front Door"
               ]
             },
@@ -1738,233 +1733,6 @@
       ]
     },
     {
-      "condition": "[equals(parameters('deploymentConfiguration'), 'Web app with Azure CDN')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
-      "name": "cdnEndPointDeploy",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "cdnProfileName": {
-            "value": "[variables('cdnProfileName')]"
-          },
-          "cdnProfileSku": {
-            "value": "[variables('cdnProfileSku')]"
-          },
-          "cdnEndpointName": {
-            "value": "[variables('cdnEndpointName')]"
-          },
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "logAnalyticsWorkspaceName": {
-            "value": "[variables('logAnalyticsWorkspaceName')]"
-          },
-          "webAppName": {
-            "value": "webAppDeploy"
-          },
-          "webAppHostName": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "12494414591420763910"
-            }
-          },
-          "parameters": {
-            "cdnProfileName": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 260,
-              "metadata": {
-                "description": "CDN Profile name"
-              }
-            },
-            "cdnProfileSku": {
-              "type": "object",
-              "metadata": {
-                "description": "CDN Profile SKU"
-              }
-            },
-            "cdnEndpointName": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 50,
-              "metadata": {
-                "description": "CDN Endpoint name"
-              }
-            },
-            "location": {
-              "type": "string",
-              "defaultValue": "[resourceGroup().location]",
-              "metadata": {
-                "description": "Location to deploy the resources"
-              }
-            },
-            "logAnalyticsWorkspaceName": {
-              "type": "string",
-              "metadata": {
-                "description": "Log Analytics workspace to use for diagnostics settings"
-              }
-            },
-            "webAppName": {
-              "type": "string",
-              "metadata": {
-                "description": "Web app to confire endpoint for"
-              }
-            },
-            "webAppHostName": {
-              "type": "string",
-              "metadata": {
-                "description": "Web app hostname to use in the endpoint"
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Cdn/profiles",
-              "apiVersion": "2024-02-01",
-              "name": "[parameters('cdnProfileName')]",
-              "location": "[parameters('location')]",
-              "sku": "[parameters('cdnProfileSku')]"
-            },
-            {
-              "type": "Microsoft.Cdn/profiles/endpoints",
-              "apiVersion": "2024-02-01",
-              "name": "[format('{0}/{1}', parameters('cdnProfileName'), parameters('cdnEndpointName'))]",
-              "location": "[parameters('location')]",
-              "properties": {
-                "isHttpAllowed": false,
-                "isHttpsAllowed": true,
-                "originHostHeader": "[parameters('webAppHostName')]",
-                "origins": [
-                  {
-                    "name": "[parameters('webAppName')]",
-                    "properties": {
-                      "hostName": "[parameters('webAppHostName')]",
-                      "httpPort": 80,
-                      "httpsPort": 443
-                    }
-                  }
-                ],
-                "isCompressionEnabled": true,
-                "contentTypesToCompress": [
-                  "application/eot",
-                  "application/font",
-                  "application/font-sfnt",
-                  "application/javascript",
-                  "application/json",
-                  "application/opentype",
-                  "application/otf",
-                  "application/pkcs7-mime",
-                  "application/truetype",
-                  "application/ttf",
-                  "application/vnd.ms-fontobject",
-                  "application/xhtml+xml",
-                  "application/xml",
-                  "application/xml+rss",
-                  "application/x-font-opentype",
-                  "application/x-font-truetype",
-                  "application/x-font-ttf",
-                  "application/x-httpd-cgi",
-                  "application/x-javascript",
-                  "application/x-mpegurl",
-                  "application/x-opentype",
-                  "application/x-otf",
-                  "application/x-perl",
-                  "application/x-ttf",
-                  "font/eot",
-                  "font/ttf",
-                  "font/otf",
-                  "font/opentype",
-                  "image/svg+xml",
-                  "text/css",
-                  "text/csv",
-                  "text/html",
-                  "text/javascript",
-                  "text/js",
-                  "text/plain",
-                  "text/richtext",
-                  "text/tab-separated-values",
-                  "text/xml",
-                  "text/x-script",
-                  "text/x-component",
-                  "text/x-java-source"
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Cdn/profiles', parameters('cdnProfileName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Cdn/profiles/{0}/endpoints/{1}', parameters('cdnProfileName'), parameters('cdnEndpointName'))]",
-              "name": "CDNEndpointDiagnostics",
-              "properties": {
-                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
-                "logs": [
-                  {
-                    "category": "CoreAnalytics",
-                    "enabled": true
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Cdn/profiles/{0}', parameters('cdnProfileName'))]",
-              "name": "CDNProfileDiagnostics",
-              "properties": {
-                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
-                "metrics": [
-                  {
-                    "category": "AllMetrics",
-                    "enabled": true
-                  }
-                ],
-                "logs": [
-                  {
-                    "category": "AzureCdnAccessLog",
-                    "enabled": true
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Cdn/profiles', parameters('cdnProfileName'))]"
-              ]
-            }
-          ],
-          "outputs": {
-            "cdnEndpointHostName": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName')), '2024-02-01').hostName]"
-            },
-            "cdnEndpointOriginHostHeader": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName')), '2024-02-01').originHostHeader]"
-            }
-          }
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
-      ]
-    },
-    {
       "condition": "[equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -2210,7 +1978,7 @@
     },
     "endpointHostName": {
       "type": "string",
-      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontendEndpointHostName.value, reference(resourceId('Microsoft.Resources/deployments', 'cdnEndPointDeploy'), '2022-09-01').outputs.cdnEndpointHostName.value)]"
+      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontendEndpointHostName.value, reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value)]"
     }
   }
 }

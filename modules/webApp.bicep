@@ -29,7 +29,7 @@ param fileShareName string
 param containerMountPath string
 
 @allowed([
-  'Web app with Azure CDN'
+  'Web app only'
   'Web app with Azure Front Door'
 ])
 param deploymentConfiguration string
