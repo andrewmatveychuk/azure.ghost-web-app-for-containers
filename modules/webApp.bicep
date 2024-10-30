@@ -113,7 +113,7 @@ resource webApp_vNetIntegration 'Microsoft.Web/sites/networkConfig@2023-12-01' =
 //End of configuring virtual network integration
 
 
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-10-01' existing = {
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
