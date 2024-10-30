@@ -29,10 +29,10 @@ param ghostContainerName string = 'andrewmatveychuk/ghost-ai:latest'
 param containerRegistryUrl string = 'https://index.docker.io/v1'
 
 @allowed([
-  'Web app with Azure CDN'
+  'Web app only'
   'Web app with Azure Front Door'
 ])
-param deploymentConfiguration string = 'Web app with Azure CDN'
+param deploymentConfiguration string = 'Web app only'
 
 @description('Virtual network address prefix to use')
 param vnetAddressPrefix string = '10.0.0.0/26'
@@ -57,14 +57,8 @@ var databaseName = 'ghost'
 
 var ghostContentFileShareName = 'contentfiles'
 var ghostContentFilesMountPath = '/var/lib/ghost/content_files'
-var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door') ? 'https://${frontDoorName}.azurefd.net' : 'https://${cdnEndpointName}.azureedge.net'
+var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door') ? 'https://${frontDoorName}.azurefd.net' : 'https://${webAppName}.azurewebsites.net'
 
-//Web app with Azure CDN
-var cdnProfileName = '${applicationNamePrefix}-cdnp-${uniqueString(resourceGroup().id)}'
-var cdnEndpointName = '${applicationNamePrefix}-cdne-${uniqueString(resourceGroup().id)}'
-var cdnProfileSku = {
-  name: 'Standard_Microsoft'
-}
 
 //Web app with Azure Front Door
 var frontDoorName = '${applicationNamePrefix}-fd-${uniqueString(resourceGroup().id)}'
@@ -206,18 +200,6 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
   ]
 }
 
-module cdnEndpoint './modules/cdnEndpoint.bicep' = if (deploymentConfiguration == 'Web app with Azure CDN') {
-  name: 'cdnEndPointDeploy'
-  params: {
-    cdnProfileName: cdnProfileName
-    cdnProfileSku: cdnProfileSku
-    cdnEndpointName: cdnEndpointName
-    location: location
-    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
-    webAppName: webApp.name
-    webAppHostName: webApp.outputs.hostName
-  }
-}
 
 module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Web app with Azure Front Door') {
   name: 'FrontDoorDeploy'
@@ -234,6 +216,6 @@ output webAppPrincipalId string = webApp.outputs.principalId
 output webAppHostName string = webApp.outputs.hostName
 output mySQLServerFQDN string = mySQLServer.outputs.fullyQualifiedDomainName
 
-var endpointHostName = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontendEndpointHostName : cdnEndpoint.outputs.cdnEndpointHostName
+var endpointHostName = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontendEndpointHostName : webApp.outputs.hostName
 
 output endpointHostName string = endpointHostName
