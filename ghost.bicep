@@ -158,7 +158,7 @@ module webAppSettings 'modules/webAppSettings.bicep' = {
     databaseHostFQDN: mySQLServer.outputs.fullyQualifiedDomainName
     // databaseLogin: '${databaseLogin}@${mySQLServer.outputs.name}'
     databaseLogin: databaseLogin
-    databasePasswordSecretUri: keyVault.outputs.databasePasswordSecretUri
+    databasePasswordSecretUri: keyVault.outputs.secretUri
     databaseName: databaseName
     siteUrl: siteUrl
   }
