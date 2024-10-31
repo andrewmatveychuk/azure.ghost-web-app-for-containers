@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "11607896624849861485"
+      "templateHash": "3002289407628966820"
     }
   },
   "parameters": {
@@ -116,9 +116,7 @@
     "databaseName": "ghost",
     "ghostContentFileShareName": "contentfiles",
     "ghostContentFilesMountPath": "/var/lib/ghost/content_files",
-    "siteUrl": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), format('https://{0}.azurefd.net', variables('frontDoorName')), format('https://{0}.azurewebsites.net', variables('webAppName')))]",
-    "frontDoorName": "[format('{0}-fd-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "wafPolicyName": "[format('{0}waf{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]"
+    "frontDoorName": "[format('{0}-afd-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]"
   },
   "resources": [
     {
@@ -567,6 +565,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
@@ -829,6 +828,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
       ]
@@ -870,9 +870,6 @@
           "logAnalyticsWorkspaceName": {
             "value": "[variables('logAnalyticsWorkspaceName')]"
           },
-          "deploymentConfiguration": {
-            "value": "[parameters('deploymentConfiguration')]"
-          },
           "vNetName": {
             "value": "[variables('vNetName')]"
           },
@@ -887,7 +884,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "13423302285459963924"
+              "templateHash": "5466483211730136174"
             }
           },
           "parameters": {
@@ -942,13 +939,6 @@
                 "description": "Path to mount the file share in the container"
               }
             },
-            "deploymentConfiguration": {
-              "type": "string",
-              "allowedValues": [
-                "Web app only",
-                "Web app with Azure Front Door"
-              ]
-            },
             "vNetName": {
               "type": "string",
               "metadata": {
@@ -1000,27 +990,6 @@
                   }
                 }
               }
-            },
-            {
-              "condition": "[equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door')]",
-              "type": "Microsoft.Web/sites/config",
-              "apiVersion": "2023-12-01",
-              "name": "[format('{0}/{1}', parameters('webAppName'), 'web')]",
-              "properties": {
-                "ipSecurityRestrictions": [
-                  {
-                    "ipAddress": "AzureFrontDoor.Backend",
-                    "action": "Allow",
-                    "tag": "ServiceTag",
-                    "priority": 300,
-                    "name": "Access from Azure Front Door",
-                    "description": "Rule for access from Azure Front Door"
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
-              ]
             },
             {
               "type": "Microsoft.Web/sites/networkConfig",
@@ -1096,7 +1065,9 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'appServicePlanDeploy')]",
-        "[resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy')]"
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
     {
@@ -1136,9 +1107,7 @@
           "databaseName": {
             "value": "[variables('databaseName')]"
           },
-          "siteUrl": {
-            "value": "[variables('siteUrl')]"
-          }
+          "siteUrl": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -1233,6 +1202,7 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'applicationInsightsDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'keyVaultDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'mySQLServerDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
@@ -1353,6 +1323,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
@@ -1374,6 +1345,9 @@
           },
           "logAnalyticsWorkspaceName": {
             "value": "[variables('logAnalyticsWorkspaceName')]"
+          },
+          "webAppName": {
+            "value": "[variables('webAppName')]"
           }
         },
         "template": {
@@ -1383,7 +1357,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "16407146013265302405"
+              "templateHash": "11718731175206936189"
             }
           },
           "parameters": {
@@ -1407,6 +1381,12 @@
               "metadata": {
                 "description": "Log Analytics workspace to use for diagnostics settings"
               }
+            },
+            "webAppName": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service to link Application Insights to"
+              }
             }
           },
           "resources": [
@@ -1415,6 +1395,9 @@
               "apiVersion": "2020-02-02",
               "name": "[parameters('applicationInsightsName')]",
               "location": "[parameters('location')]",
+              "tags": {
+                "[format('hidden-link:{0}', resourceId('Microsoft.Web/sites', parameters('webAppName')))]": "Resource"
+              },
               "kind": "web",
               "properties": {
                 "Application_Type": "web",
@@ -1497,7 +1480,11 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1729,6 +1716,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
         "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
       ]
     },
@@ -1743,17 +1731,17 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "frontDoorName": {
+          "frontDoorProfileName": {
             "value": "[variables('frontDoorName')]"
           },
-          "wafPolicyName": {
-            "value": "[variables('wafPolicyName')]"
-          },
-          "logAnalyticsWorkspaceName": {
-            "value": "[variables('logAnalyticsWorkspaceName')]"
+          "applicationName": {
+            "value": "[parameters('applicationNamePrefix')]"
           },
           "webAppName": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.name.value]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
           }
         },
         "template": {
@@ -1763,19 +1751,20 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "14278063683759801272"
+              "templateHash": "15930341172768835300"
             }
           },
           "parameters": {
-            "frontDoorName": {
+            "frontDoorProfileName": {
               "type": "string",
               "minLength": 5,
               "maxLength": 64
             },
-            "wafPolicyName": {
+            "applicationName": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 128
+              "metadata": {
+                "description": "Application name"
+              }
             },
             "logAnalyticsWorkspaceName": {
               "type": "string",
@@ -1791,116 +1780,98 @@
             }
           },
           "variables": {
-            "backendPool1Name": "[format('{0}-backendPool1', parameters('frontDoorName'))]",
-            "healthProbe1Name": "[format('{0}-healthProbe1', parameters('frontDoorName'))]",
-            "frontendEndpoint1Name": "[format('{0}-frontendEndpoint1', parameters('frontDoorName'))]",
-            "loadBalancing1Name": "[format('{0}-loadBalancing1', parameters('frontDoorName'))]",
-            "routingRule1Name": "[format('{0}-routingRule1', parameters('frontDoorName'))]",
-            "frontendEndpoint1hostName": "[format('{0}.azurefd.net', parameters('frontDoorName'))]"
+            "frontDoorEndpointName": "[format('{0}-Endpoint', parameters('applicationName'))]",
+            "frontDoorOriginGroupName": "[format('{0}-OriginGroup', parameters('applicationName'))]",
+            "frontDoorOriginName": "[format('{0}-Origin', parameters('applicationName'))]",
+            "frontDoorRouteName": "[format('{0}-Route', parameters('applicationName'))]"
           },
           "resources": [
             {
-              "type": "Microsoft.Network/frontDoors",
-              "apiVersion": "2021-06-01",
-              "name": "[parameters('frontDoorName')]",
+              "type": "Microsoft.Cdn/profiles",
+              "apiVersion": "2024-02-01",
+              "name": "[parameters('frontDoorProfileName')]",
+              "location": "global",
+              "sku": {
+                "name": "Standard_AzureFrontDoor"
+              }
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints",
+              "apiVersion": "2024-02-01",
+              "name": "[format('{0}/{1}', parameters('frontDoorProfileName'), variables('frontDoorEndpointName'))]",
               "location": "global",
               "properties": {
-                "routingRules": [
-                  {
-                    "name": "[variables('routingRule1Name')]",
-                    "properties": {
-                      "frontendEndpoints": [
-                        {
-                          "id": "[resourceId('Microsoft.Network/frontDoors/frontendEndpoints', parameters('frontDoorName'), variables('frontendEndpoint1Name'))]"
-                        }
-                      ],
-                      "acceptedProtocols": [
-                        "Http",
-                        "Https"
-                      ],
-                      "patternsToMatch": [
-                        "/*"
-                      ],
-                      "routeConfiguration": {
-                        "@odata.type": "#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration",
-                        "forwardingProtocol": "HttpsOnly",
-                        "backendPool": {
-                          "id": "[resourceId('Microsoft.Network/frontDoors/backendPools', parameters('frontDoorName'), variables('backendPool1Name'))]"
-                        },
-                        "cacheConfiguration": {
-                          "queryParameterStripDirective": "StripNone",
-                          "dynamicCompression": "Enabled"
-                        }
-                      },
-                      "enabledState": "Enabled"
-                    }
-                  }
-                ],
-                "healthProbeSettings": [
-                  {
-                    "name": "[variables('healthProbe1Name')]",
-                    "properties": {
-                      "path": "/",
-                      "protocol": "Https",
-                      "intervalInSeconds": 120
-                    }
-                  }
-                ],
-                "loadBalancingSettings": [
-                  {
-                    "name": "[variables('loadBalancing1Name')]",
-                    "properties": {
-                      "sampleSize": 4,
-                      "successfulSamplesRequired": 2
-                    }
-                  }
-                ],
-                "backendPools": [
-                  {
-                    "name": "[variables('backendPool1Name')]",
-                    "properties": {
-                      "backends": [
-                        {
-                          "address": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').defaultHostName]",
-                          "backendHostHeader": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').defaultHostName]",
-                          "httpPort": 80,
-                          "httpsPort": 443,
-                          "weight": 50,
-                          "priority": 1,
-                          "enabledState": "Enabled"
-                        }
-                      ],
-                      "loadBalancingSettings": {
-                        "id": "[resourceId('Microsoft.Network/frontDoors/loadBalancingSettings', parameters('frontDoorName'), variables('loadBalancing1Name'))]"
-                      },
-                      "healthProbeSettings": {
-                        "id": "[resourceId('Microsoft.Network/frontDoors/healthProbeSettings', parameters('frontDoorName'), variables('healthProbe1Name'))]"
-                      }
-                    }
-                  }
-                ],
-                "frontendEndpoints": [
-                  {
-                    "name": "[variables('frontendEndpoint1Name')]",
-                    "properties": {
-                      "hostName": "[variables('frontendEndpoint1hostName')]",
-                      "sessionAffinityEnabledState": "Disabled",
-                      "webApplicationFirewallPolicyLink": {
-                        "id": "[resourceId('Microsoft.Network/FrontDoorWebApplicationFirewallPolicies', parameters('wafPolicyName'))]"
-                      }
-                    }
-                  }
-                ],
                 "enabledState": "Enabled"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Network/FrontDoorWebApplicationFirewallPolicies', parameters('wafPolicyName'))]"
+                "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups",
+              "apiVersion": "2024-02-01",
+              "name": "[format('{0}/{1}', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'))]",
+              "properties": {
+                "loadBalancingSettings": {
+                  "sampleSize": 4,
+                  "successfulSamplesRequired": 2
+                },
+                "healthProbeSettings": {
+                  "probePath": "/",
+                  "probeRequestType": "HEAD",
+                  "probeProtocol": "Https",
+                  "probeIntervalInSeconds": 120
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups/origins",
+              "apiVersion": "2024-02-01",
+              "name": "[format('{0}/{1}/{2}', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'), variables('frontDoorOriginName'))]",
+              "properties": {
+                "hostName": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').defaultHostName]",
+                "httpPort": 80,
+                "httpsPort": 443,
+                "originHostHeader": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').defaultHostName]",
+                "priority": 1,
+                "weight": 1000
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+              "apiVersion": "2024-02-01",
+              "name": "[format('{0}/{1}/{2}', parameters('frontDoorProfileName'), variables('frontDoorEndpointName'), variables('frontDoorRouteName'))]",
+              "properties": {
+                "originGroup": {
+                  "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'))]"
+                },
+                "supportedProtocols": [
+                  "Http",
+                  "Https"
+                ],
+                "patternsToMatch": [
+                  "/*"
+                ],
+                "forwardingProtocol": "HttpsOnly",
+                "linkToDefaultDomain": "Enabled",
+                "httpsRedirect": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), variables('frontDoorEndpointName'))]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'), variables('frontDoorOriginName'))]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'))]"
               ]
             },
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Network/frontDoors/{0}', parameters('frontDoorName'))]",
+              "scope": "[format('Microsoft.Cdn/profiles/{0}', parameters('frontDoorProfileName'))]",
               "name": "FrontDoorDiagnostics",
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
@@ -1918,38 +1889,46 @@
                   {
                     "category": "FrontdoorWebApplicationFirewallLog",
                     "enabled": true
+                  },
+                  {
+                    "category": "FrontdoorHealthProbeLog",
+                    "enabled": true
                   }
                 ]
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Network/frontDoors', parameters('frontDoorName'))]"
+                "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName'))]"
               ]
             },
             {
-              "type": "Microsoft.Network/FrontDoorWebApplicationFirewallPolicies",
-              "apiVersion": "2024-02-01",
-              "name": "[parameters('wafPolicyName')]",
-              "location": "global",
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', parameters('webAppName'), 'web')]",
               "properties": {
-                "policySettings": {
-                  "mode": "Prevention",
-                  "enabledState": "Enabled"
-                },
-                "managedRules": {
-                  "managedRuleSets": [
-                    {
-                      "ruleSetType": "Microsoft_DefaultRuleSet",
-                      "ruleSetVersion": "1.1"
+                "ipSecurityRestrictions": [
+                  {
+                    "ipAddress": "AzureFrontDoor.Backend",
+                    "action": "Allow",
+                    "tag": "ServiceTag",
+                    "priority": 100,
+                    "name": "Allow traffic from Front Door",
+                    "headers": {
+                      "x-azure-fdid": [
+                        "[reference(resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName')), '2024-02-01').frontDoorId]"
+                      ]
                     }
-                  ]
-                }
-              }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName'))]"
+              ]
             }
           ],
           "outputs": {
-            "frontendEndpointHostName": {
+            "frontDoorEndpointHostName": {
               "type": "string",
-              "value": "[variables('frontendEndpoint1hostName')]"
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), variables('frontDoorEndpointName')), '2024-02-01').hostName]"
             }
           }
         }
@@ -1978,7 +1957,7 @@
     },
     "endpointHostName": {
       "type": "string",
-      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontendEndpointHostName.value, reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value)]"
+      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value, reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value)]"
     }
   }
 }

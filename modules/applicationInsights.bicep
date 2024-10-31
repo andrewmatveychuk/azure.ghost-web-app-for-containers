@@ -11,13 +11,23 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
+@description('App Service to link Application Insights to')
+param webAppName string
+
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
+}
+
+resource webApp 'Microsoft.Web/sites@2023-12-01' existing = {
+  name: webAppName
 }
 
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: applicationInsightsName
   location: location
+  tags: {
+    'hidden-link:${webApp.id}': 'Resource'
+  }
   kind: 'web'
   properties: {
     Application_Type: 'web'
