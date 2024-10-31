@@ -90,6 +90,10 @@ resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-p
         category: 'AuditEvent'
         enabled: true
       }
+      {
+        category: 'AzurePolicyEvaluationDetails'
+        enabled: true
+      }
     ]
   }
 }
