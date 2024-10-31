@@ -2,11 +2,10 @@ targetScope = 'resourceGroup'
 
 @minLength(5)
 @maxLength(64)
-param frontDoorName string
+param frontDoorProfileName string
 
-@minLength(1)
-@maxLength(128)
-param wafPolicyName string
+@description('Application name')
+param applicationName string
 
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
@@ -14,17 +13,91 @@ param logAnalyticsWorkspaceName string
 @description('Web app to confire Front Door for')
 param webAppName string
 
-var backendPool1Name = '${frontDoorName}-backendPool1'
-var healthProbe1Name = '${frontDoorName}-healthProbe1'
-var frontendEndpoint1Name = '${frontDoorName}-frontendEndpoint1'
-var loadBalancing1Name = '${frontDoorName}-loadBalancing1'
-var routingRule1Name = '${frontDoorName}-routingRule1'
-var frontendEndpoint1hostName = '${frontDoorName}.azurefd.net'
+var frontDoorEndpointName = '${applicationName}-Endpoint'
+var frontDoorOriginGroupName = '${applicationName}-OriginGroup'
+var frontDoorOriginName = '${applicationName}-Origin'
+var frontDoorRouteName = '${applicationName}-Route'
+
+resource frontDoorProfile 'Microsoft.Cdn/profiles@2024-02-01' = {
+  name: frontDoorProfileName
+  location: 'global'
+  sku: {
+    name: 'Standard_AzureFrontDoor'
+  }
+}
+
+resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' = {
+  name: frontDoorEndpointName
+  parent: frontDoorProfile
+  location: 'global'
+  properties: {
+    enabledState: 'Enabled'
+  }
+}
+
+resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2024-02-01' = {
+  name: frontDoorOriginGroupName
+  parent: frontDoorProfile
+  properties: {
+    loadBalancingSettings: {
+      sampleSize: 4
+      successfulSamplesRequired: 2
+    }
+    healthProbeSettings: {
+      probePath: '/'
+      probeRequestType: 'HEAD'
+      probeProtocol: 'Https'
+      probeIntervalInSeconds: 120
+    }
+  }
+}
 
 resource existingWebApp 'Microsoft.Web/sites@2023-12-01' existing = {
   name: webAppName
 }
 
+resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01' = {
+  name: frontDoorOriginName
+  parent: frontDoorOriginGroup
+  properties: {
+    hostName: existingWebApp.properties.defaultHostName
+    httpPort: 80
+    httpsPort: 443
+    originHostHeader: existingWebApp.properties.defaultHostName
+    priority: 1
+    weight: 1000
+  }
+}
+
+resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = {
+  name: frontDoorRouteName
+  parent: frontDoorEndpoint
+  dependsOn: [
+    frontDoorOrigin
+  ]
+  properties: {
+    originGroup: {
+      id: frontDoorOriginGroup.id
+    }
+    supportedProtocols: [
+      'Http'
+      'Https'
+    ]
+    patternsToMatch: [
+      '/*'
+    ]
+    forwardingProtocol: 'HttpsOnly'
+    linkToDefaultDomain: 'Enabled'
+    httpsRedirect: 'Enabled'
+    /* cacheConfiguration: {
+      compressionSettings:{
+        isCompressionEnabled: true
+      }
+    } */
+  }
+}
+
+/*
 resource frontDoor 'Microsoft.Network/frontDoors@2021-06-01' = {
   name: frontDoorName
   location: 'global'
@@ -109,22 +182,19 @@ resource frontDoor 'Microsoft.Network/frontDoors@2021-06-01' = {
         properties: {
           hostName: frontendEndpoint1hostName
           sessionAffinityEnabledState: 'Disabled'
-          webApplicationFirewallPolicyLink: {
-            id: wafPolicy.id
-          }
         }
       }
     ]
     enabledState: 'Enabled'
   }
-}
+} */
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
 resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  scope: frontDoor
+  scope: frontDoorProfile
   name: 'FrontDoorDiagnostics'
   properties: {
     workspaceId: logAnalyticsWorkspace.id
@@ -143,27 +213,33 @@ resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-
         category: 'FrontdoorWebApplicationFirewallLog'
         enabled: true
       }
+      {
+        category: 'FrontdoorHealthProbeLog'
+        enabled: true
+      }
     ]
   }
 }
 
-resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2024-02-01' = {
-  name: wafPolicyName
-  location: 'global'
+resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = {
+  parent: existingWebApp
+  name: 'web'
   properties: {
-    policySettings: {
-      mode: 'Prevention'
-      enabledState: 'Enabled'
-    }
-    managedRules: {
-      managedRuleSets: [
-        {
-          ruleSetType: 'Microsoft_DefaultRuleSet'
-          ruleSetVersion: '1.1'
+    ipSecurityRestrictions: [
+      {
+        ipAddress: 'AzureFrontDoor.Backend'
+        action: 'Allow'
+        tag: 'ServiceTag'
+        priority: 100
+        name: 'Allow traffic from Front Door'
+        headers: {
+          'x-azure-fdid': [
+            frontDoorProfile.properties.frontDoorId
+          ]
         }
-      ]
-    }
+      }
+    ]
   }
 }
 
-output frontendEndpointHostName string = frontendEndpoint1hostName
+output frontDoorEndpointHostName string = frontDoorEndpoint.properties.hostName

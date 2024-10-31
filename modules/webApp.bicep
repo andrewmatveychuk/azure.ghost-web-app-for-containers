@@ -28,12 +28,6 @@ param fileShareName string
 @description('Path to mount the file share in the container')
 param containerMountPath string
 
-@allowed([
-  'Web app only'
-  'Web app with Azure Front Door'
-])
-param deploymentConfiguration string
-
 var containerImageReference = 'DOCKER|${ghostContainerImage}'
 
 resource webApp 'Microsoft.Web/sites@2023-12-01' = {
@@ -69,24 +63,6 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     }
   }
 }
-
-resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = if (deploymentConfiguration == 'Web app with Azure Front Door') {
-  parent: webApp
-  name: 'web'
-  properties: {
-    ipSecurityRestrictions: [
-      {
-        ipAddress: 'AzureFrontDoor.Backend'
-        action: 'Allow'
-        tag: 'ServiceTag'
-        priority: 300
-        name: 'Access from Azure Front Door'
-        description: 'Rule for access from Azure Front Door'
-      }
-    ]
-  }
-}
-
 
 // Configuring virtual network integration
 @description('Virtual network for a private endpoint')

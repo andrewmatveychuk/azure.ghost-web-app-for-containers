@@ -57,12 +57,11 @@ var databaseName = 'ghost'
 
 var ghostContentFileShareName = 'contentfiles'
 var ghostContentFilesMountPath = '/var/lib/ghost/content_files'
-var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door') ? 'https://${frontDoorName}.azurefd.net' : 'https://${webAppName}.azurewebsites.net'
+var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontDoorEndpointHostName : webApp.outputs.hostName
 
 
 //Web app with Azure Front Door
-var frontDoorName = '${applicationNamePrefix}-fd-${uniqueString(resourceGroup().id)}'
-var wafPolicyName = '${applicationNamePrefix}waf${uniqueString(resourceGroup().id)}'
+var frontDoorName = '${applicationNamePrefix}-afd-${uniqueString(resourceGroup().id)}'
 
 module vNet 'modules/virtualNetwork.bicep' = {
   name: 'vNetDeploy'
@@ -100,6 +99,7 @@ module storageAccount 'modules/storageAccount.bicep' = {
   }
   dependsOn: [
     vNet
+    logAnalyticsWorkspace
   ]
 }
 
@@ -117,6 +117,7 @@ module keyVault './modules/keyVault.bicep' = {
   }
   dependsOn: [
     vNet
+    logAnalyticsWorkspace
   ]
 }
 
@@ -132,12 +133,13 @@ module webApp './modules/webApp.bicep' = {
     containerMountPath: ghostContentFilesMountPath
     location: location
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
-    deploymentConfiguration: deploymentConfiguration
     vNetName: vNetName
     webAppIntegrationSubnetName: webAppIntegrationSubnetName
   }
   dependsOn: [
     appServicePlan
+    vNet
+    logAnalyticsWorkspace
   ]
 }
 
@@ -158,6 +160,8 @@ module webAppSettings 'modules/webAppSettings.bicep' = {
   }
   dependsOn: [
     webApp
+    frontDoor
+    mySQLServer
   ]
 }
 
@@ -171,6 +175,7 @@ module appServicePlan './modules/appServicePlan.bicep' = {
   }
   dependsOn: [
     vNet
+    logAnalyticsWorkspace
   ]
 }
 
@@ -180,7 +185,12 @@ module applicationInsights './modules/applicationInsights.bicep' = {
     applicationInsightsName: applicationInsightsName
     location: location
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+    webAppName: webAppName
   }
+  dependsOn: [
+    webApp
+    logAnalyticsWorkspace
+  ]
 }
 
 module mySQLServer 'modules/mySQLServer.bicep' = {
@@ -197,6 +207,7 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
   }
   dependsOn: [
     vNet
+    logAnalyticsWorkspace
   ]
 }
 
@@ -204,10 +215,10 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
 module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Web app with Azure Front Door') {
   name: 'FrontDoorDeploy'
   params: {
-    frontDoorName: frontDoorName
-    wafPolicyName: wafPolicyName
-    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+    frontDoorProfileName: frontDoorName
+    applicationName: applicationNamePrefix
     webAppName: webApp.outputs.name
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
   }
 }
 
@@ -216,6 +227,6 @@ output webAppPrincipalId string = webApp.outputs.principalId
 output webAppHostName string = webApp.outputs.hostName
 output mySQLServerFQDN string = mySQLServer.outputs.fullyQualifiedDomainName
 
-var endpointHostName = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontendEndpointHostName : webApp.outputs.hostName
+var endpointHostName = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontDoorEndpointHostName : webApp.outputs.hostName
 
 output endpointHostName string = endpointHostName
