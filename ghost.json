@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "3002289407628966820"
+      "templateHash": "7139594097611065884"
     }
   },
   "parameters": {
@@ -341,7 +341,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "4751577130592396654"
+              "templateHash": "12410567274693854822"
             }
           },
           "parameters": {
@@ -487,7 +487,7 @@
             {
               "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
               "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', variables('privateDnsZoneName')))]",
+              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', parameters('vNetName')))]",
               "location": "global",
               "properties": {
                 "registrationEnabled": false,
@@ -545,21 +545,9 @@
             }
           ],
           "outputs": {
-            "id": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
-            },
-            "name": {
-              "type": "string",
-              "value": "[parameters('storageAccountName')]"
-            },
             "fileShareFullName": {
               "type": "string",
               "value": "[parameters('fileShareFolderName')]"
-            },
-            "accessKey": {
-              "type": "string",
-              "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').keys[0].value]"
             }
           }
         }
@@ -611,7 +599,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "12931703526374323442"
+              "templateHash": "15373829370109854823"
             }
           },
           "parameters": {
@@ -745,6 +733,10 @@
                   {
                     "category": "AuditEvent",
                     "enabled": true
+                  },
+                  {
+                    "category": "AzurePolicyEvaluationDetails",
+                    "enabled": true
                   }
                 ]
               },
@@ -762,7 +754,7 @@
             {
               "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
               "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', variables('privateDnsZoneName')))]",
+              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', parameters('vNetName')))]",
               "location": "global",
               "properties": {
                 "registrationEnabled": false,
@@ -853,10 +845,7 @@
             "value": "[parameters('ghostContainerName')]"
           },
           "storageAccountName": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy'), '2022-09-01').outputs.name.value]"
-          },
-          "storageAccountAccessKey": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy'), '2022-09-01').outputs.accessKey.value]"
+            "value": "[variables('storageAccountName')]"
           },
           "fileShareName": {
             "value": "[variables('ghostContentFileShareName')]"
@@ -884,7 +873,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "5466483211730136174"
+              "templateHash": "6681833644415835423"
             }
           },
           "parameters": {
@@ -923,9 +912,6 @@
               "metadata": {
                 "description": "Storage account name to store Ghost content files"
               }
-            },
-            "storageAccountAccessKey": {
-              "type": "securestring"
             },
             "fileShareName": {
               "type": "string",
@@ -985,7 +971,7 @@
                       "accountName": "[parameters('storageAccountName')]",
                       "shareName": "[parameters('fileShareName')]",
                       "mountPath": "[parameters('containerMountPath')]",
-                      "accessKey": "[parameters('storageAccountAccessKey')]"
+                      "accessKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').keys[0].value]"
                     }
                   }
                 }
@@ -1528,7 +1514,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "16695314290839249604"
+              "templateHash": "15041128139579856621"
             }
           },
           "parameters": {
@@ -1671,7 +1657,7 @@
             {
               "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
               "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', variables('privateDnsZoneName')))]",
+              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', parameters('vNetName')))]",
               "location": "global",
               "properties": {
                 "registrationEnabled": false,
