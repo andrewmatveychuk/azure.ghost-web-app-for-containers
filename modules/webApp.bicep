@@ -19,9 +19,6 @@ param ghostContainerImage string
 @description('Storage account name to store Ghost content files')
 param storageAccountName string
 
-@secure()
-param storageAccountAccessKey string
-
 @description('File share name on the storage account to store Ghost content files')
 param fileShareName string
 
@@ -29,6 +26,10 @@ param fileShareName string
 param containerMountPath string
 
 var containerImageReference = 'DOCKER|${ghostContainerImage}'
+
+resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing ={
+  name: storageAccountName
+}
 
 resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   name: webAppName
@@ -54,10 +55,10 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
       azureStorageAccounts: {
         ContentFilesVolume: {
           type: 'AzureFiles'
-          accountName: storageAccountName
+          accountName: existingStorageAccount.name
           shareName: fileShareName
           mountPath: containerMountPath
-          accessKey: storageAccountAccessKey
+          accessKey: existingStorageAccount.listKeys().keys[0].value
         }
       }
     }

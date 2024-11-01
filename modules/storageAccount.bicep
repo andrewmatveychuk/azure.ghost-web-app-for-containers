@@ -166,7 +166,7 @@ resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneG
 }
 // End of configuring private endpoint
 
-output id string = storageAccount.id
-output name string = storageAccount.name
+// output id string = storageAccount.id
+// output name string = storageAccount.name
 output fileShareFullName string = fileShare.name
-output accessKey string = listKeys(storageAccount.id, storageAccount.apiVersion).keys[0].value
+// output accessKey string = listKeys(storageAccount.id, storageAccount.apiVersion).keys[0].value

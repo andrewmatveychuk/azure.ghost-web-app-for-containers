@@ -127,8 +127,7 @@ module webApp './modules/webApp.bicep' = {
     webAppName: webAppName
     appServicePlanId: appServicePlan.outputs.id
     ghostContainerImage: ghostContainerName
-    storageAccountName: storageAccount.outputs.name
-    storageAccountAccessKey: storageAccount.outputs.accessKey
+    storageAccountName: storageAccountName
     fileShareName: ghostContentFileShareName
     containerMountPath: ghostContentFilesMountPath
     location: location
@@ -140,6 +139,7 @@ module webApp './modules/webApp.bicep' = {
     appServicePlan
     vNet
     logAnalyticsWorkspace
+    storageAccount
   ]
 }
 
