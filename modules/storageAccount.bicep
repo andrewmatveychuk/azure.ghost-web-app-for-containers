@@ -34,7 +34,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -42,7 +42,7 @@ resource storageAccountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-0
   scope: storageAccount
   name: 'StorageAccountDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspace.id
+    workspaceId: existingWorkspace.id
     metrics: [
       {
         category: 'Transaction'
@@ -61,7 +61,7 @@ resource fileServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-
   scope: fileServices
   name: 'FileServicesDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspace.id
+    workspaceId: existingWorkspace.id
     metrics: [
       {
         category: 'Transaction'
@@ -100,13 +100,13 @@ var privateEndpointName = 'ghost-pl-file-${uniqueString(resourceGroup().id)}'
 var privateDnsZoneName = 'privatelink.file.${environment().suffixes.storage}'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/file'
 
-resource vNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
   name: vNetName
 }
 
-resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
   name: privateEndpointsSubnetName
-  parent: vNet
+  parent: existingVNet
 }
 
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
@@ -117,12 +117,12 @@ resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 
 resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: privateDnsZone
-  name: '${vNet.name}-link'
+  name: '${existingVNet.name}-link'
   location: 'global'
   properties: {
     registrationEnabled: false
     virtualNetwork: {
-      id: vNet.id
+      id: existingVNet.id
     }
   }
 }
@@ -132,7 +132,7 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
   location: location
   properties: {
     subnet: {
-      id: subnet.id
+      id: existingSubnet.id
     }
     privateLinkServiceConnections: [
       {
@@ -166,7 +166,4 @@ resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneG
 }
 // End of configuring private endpoint
 
-// output id string = storageAccount.id
-// output name string = storageAccount.name
 output fileShareFullName string = fileShare.name
-// output accessKey string = listKeys(storageAccount.id, storageAccount.apiVersion).keys[0].value

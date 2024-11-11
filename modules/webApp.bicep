@@ -7,28 +7,14 @@ param webAppName string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-@description('App Service Plan id to host the app')
-param appServicePlanId string
+@description('App Service Plan to host the app')
+param appServicePlanName string
 
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-@description('Ghost container full image name and tag')
-param ghostContainerImage string
-
-@description('Storage account name to store Ghost content files')
-param storageAccountName string
-
-@description('File share name on the storage account to store Ghost content files')
-param fileShareName string
-
-@description('Path to mount the file share in the container')
-param containerMountPath string
-
-var containerImageReference = 'DOCKER|${ghostContainerImage}'
-
-resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing ={
-  name: storageAccountName
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' existing = {
+  name: appServicePlanName
 }
 
 resource webApp 'Microsoft.Web/sites@2023-12-01' = {
@@ -40,28 +26,10 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   }
   properties: {
     clientAffinityEnabled: false
-    serverFarmId: appServicePlanId
+    serverFarmId: appServicePlan.id
     httpsOnly: true
     enabled: true
     reserved: true
-    siteConfig: {
-      http20Enabled: true
-      httpLoggingEnabled: true
-      minTlsVersion: '1.3'
-      ftpsState: 'Disabled'
-      linuxFxVersion: containerImageReference
-      alwaysOn: true
-      use32BitWorkerProcess: false
-      azureStorageAccounts: {
-        ContentFilesVolume: {
-          type: 'AzureFiles'
-          accountName: existingStorageAccount.name
-          shareName: fileShareName
-          mountPath: containerMountPath
-          accessKey: existingStorageAccount.listKeys().keys[0].value
-        }
-      }
-    }
   }
 }
 
@@ -71,26 +39,25 @@ param vNetName string
 @description('Target subnet to integrate web app')
 param webAppIntegrationSubnetName string
 
-resource vNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+resource existingvNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
   name: vNetName
 }
 
-resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
   name: webAppIntegrationSubnetName
-  parent: vNet
+  parent: existingvNet
 }
 
 resource webApp_vNetIntegration 'Microsoft.Web/sites/networkConfig@2023-12-01' = {
   parent: webApp
   name: 'virtualNetwork'
   properties: {
-    subnetResourceId: subnet.id
+    subnetResourceId: existingSubnet.id
   }
 }
 //End of configuring virtual network integration
 
-
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -98,7 +65,7 @@ resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
   scope: webApp
   name: 'WebAppDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspace.id
+    workspaceId: existingWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'
@@ -134,6 +101,4 @@ resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
   }
 }
 
-output name string = webApp.name
 output hostName string = webApp.properties.hostNames[0]
-output principalId string = webApp.identity.principalId

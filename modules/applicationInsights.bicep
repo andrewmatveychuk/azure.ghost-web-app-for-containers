@@ -14,11 +14,11 @@ param logAnalyticsWorkspaceName string
 @description('App Service to link Application Insights to')
 param webAppName string
 
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
-resource webApp 'Microsoft.Web/sites@2023-12-01' existing = {
+resource existingWebApp 'Microsoft.Web/sites@2023-12-01' existing = {
   name: webAppName
 }
 
@@ -26,12 +26,12 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: applicationInsightsName
   location: location
   tags: {
-    'hidden-link:${webApp.id}': 'Resource'
+    'hidden-link:${existingWebApp.id}': 'Resource'
   }
   kind: 'web'
   properties: {
     Application_Type: 'web'
-    WorkspaceResourceId: logAnalyticsWorkspace.id
+    WorkspaceResourceId: existingWorkspace.id
   }
 }
 
@@ -39,7 +39,7 @@ resource applicationInsightsDiagnostics 'Microsoft.Insights/diagnosticSettings@2
   scope: applicationInsights
   name: 'InsightsDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspace.id
+    workspaceId: existingWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'
@@ -94,6 +94,3 @@ resource applicationInsightsDiagnostics 'Microsoft.Insights/diagnosticSettings@2
     ]
   }
 }
-
-output InstrumentationKey string = applicationInsights.properties.InstrumentationKey
-output ConnectionString string = applicationInsights.properties.ConnectionString
