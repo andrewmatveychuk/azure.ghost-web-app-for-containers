@@ -20,8 +20,8 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-@description('Service principal ID to provide access to the vault secrets')
-param servicePrincipalId string
+@description('Web App name to provide access to Key Vault')
+param webAppName string
 
 resource keyVault 'Microsoft.KeyVault/vaults@2024-04-01-preview' = {
   name: keyVaultName
@@ -52,12 +52,16 @@ var roleIdMapping = {
   'Key Vault Secrets User': '4633458b-17de-408a-b874-0445c86b69e6'
 }
 
+resource existingWebApp 'Microsoft.Web/sites@2023-12-01' existing = {
+  name: webAppName
+}
+
 resource kvRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(roleIdMapping['Key Vault Secrets User'], servicePrincipalId, keyVault.id)
+  name: guid(roleIdMapping['Key Vault Secrets User'], existingWebApp.name, keyVault.name)
   scope: keyVault
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleIdMapping['Key Vault Secrets User'])
-    principalId: servicePrincipalId
+    principalId: existingWebApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -70,7 +74,7 @@ resource secret 'Microsoft.KeyVault/vaults/secrets@2024-04-01-preview' = {
   }
 }
 
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -78,7 +82,7 @@ resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-p
   scope: keyVault
   name: 'KeyVaultDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspace.id
+    workspaceId: existingWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'
@@ -108,13 +112,13 @@ var privateEndpointName = 'ghost-pl-kv-${uniqueString(resourceGroup().id)}'
 var privateDnsZoneName = 'privatelink.vaultcore.azure.net'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/keyvault'
 
-resource vNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
   name: vNetName
 }
 
-resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
   name: privateEndpointsSubnetName
-  parent: vNet
+  parent: existingVNet
 }
 
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
@@ -125,12 +129,12 @@ resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 
 resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: privateDnsZone
-  name: '${vNet.name}-link'
+  name: '${existingVNet.name}-link'
   location: 'global'
   properties: {
     registrationEnabled: false
     virtualNetwork: {
-      id: vNet.id
+      id: existingVNet.id
     }
   }
 }
@@ -140,7 +144,7 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
   location: location
   properties: {
     subnet: {
-      id: subnet.id
+      id: existingSubnet.id
     }
     privateLinkServiceConnections: [
       {

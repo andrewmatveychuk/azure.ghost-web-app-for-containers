@@ -37,7 +37,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   }
 }
 
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -45,7 +45,7 @@ resource appServicePlanDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-0
   scope: appServicePlan
   name: 'AppServicePlanDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspace.id
+    workspaceId: existingWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'
@@ -54,5 +54,3 @@ resource appServicePlanDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-0
     ]
   }
 }
-
-output id string = appServicePlan.id

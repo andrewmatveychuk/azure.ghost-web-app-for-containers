@@ -42,7 +42,7 @@ resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' = {
   }
 }
 
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -50,7 +50,7 @@ resource mySQLServerDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
   scope: mySQLServer
   name: 'MySQLServerDiagnostics'
   properties: {
-    workspaceId: logAnalyticsWorkspace.id
+    workspaceId: existingWorkspace.id
     metrics: [
       {
         category: 'AllMetrics'
@@ -80,13 +80,13 @@ var privateEndpointName = 'ghost-pl-mysql-${uniqueString(resourceGroup().id)}'
 var privateDnsZoneName = 'privatelink.mysql.database.azure.com'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/mysql'
 
-resource vNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
   name: vNetName
 }
 
-resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
   name: privateEndpointsSubnetName
-  parent: vNet
+  parent: existingVNet
 }
 
 resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
@@ -94,7 +94,7 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
   location: location
   properties: {
     subnet: {
-      id: subnet.id
+      id: existingSubnet.id
     }
     privateLinkServiceConnections: [
       {
@@ -118,12 +118,12 @@ resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 
 resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: privateDnsZone
-  name: '${vNet.name}-link'
+  name: '${existingVNet.name}-link'
   location: 'global'
   properties: {
     registrationEnabled: false
     virtualNetwork: {
-      id: vNet.id
+      id: existingVNet.id
     }
   }
 }
@@ -145,7 +145,3 @@ resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneG
   ]
 }
 // End of configuring private endpoint
-
-
-output name string = mySQLServer.name
-output fullyQualifiedDomainName string = mySQLServer.properties.fullyQualifiedDomainName

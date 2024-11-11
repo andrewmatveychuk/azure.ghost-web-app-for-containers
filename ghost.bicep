@@ -57,8 +57,9 @@ var databaseName = 'ghost'
 
 var ghostContentFileShareName = 'contentfiles'
 var ghostContentFilesMountPath = '/var/lib/ghost/content_files'
-var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontDoorEndpointHostName : webApp.outputs.hostName
-
+var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door')
+  ? 'https://${frontDoor.outputs.frontDoorEndpointHostName}'
+  : 'https://${webApp.outputs.hostName}'
 
 //Web app with Azure Front Door
 var frontDoorName = '${applicationNamePrefix}-afd-${uniqueString(resourceGroup().id)}'
@@ -74,7 +75,6 @@ module vNet 'modules/virtualNetwork.bicep' = {
     webAppIntegrationSubnetPrefix: webAppIntegrationSubnetPrefix
     location: location
   }
-
 }
 
 module logAnalyticsWorkspace './modules/logAnalyticsWorkspace.bicep' = {
@@ -110,12 +110,13 @@ module keyVault './modules/keyVault.bicep' = {
     keyVaultSecretName: 'databasePassword'
     keyVaultSecretValue: databasePassword
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
-    servicePrincipalId: webApp.outputs.principalId
     location: location
     vNetName: vNetName
     privateEndpointsSubnetName: privateEndpointsSubnetName
+    webAppName: webAppName
   }
   dependsOn: [
+    webApp
     vNet
     logAnalyticsWorkspace
   ]
@@ -125,11 +126,7 @@ module webApp './modules/webApp.bicep' = {
   name: 'webAppDeploy'
   params: {
     webAppName: webAppName
-    appServicePlanId: appServicePlan.outputs.id
-    ghostContainerImage: ghostContainerName
-    storageAccountName: storageAccountName
-    fileShareName: ghostContentFileShareName
-    containerMountPath: ghostContentFilesMountPath
+    appServicePlanName: appServicePlanName
     location: location
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     vNetName: vNetName
@@ -139,24 +136,24 @@ module webApp './modules/webApp.bicep' = {
     appServicePlan
     vNet
     logAnalyticsWorkspace
-    storageAccount
   ]
 }
 
 module webAppSettings 'modules/webAppSettings.bicep' = {
   name: 'webAppSettingsDeploy'
   params: {
-    webAppName: webApp.outputs.name
-    applicationInsightsConnectionString: applicationInsights.outputs.ConnectionString
-    applicationInsightsInstrumentationKey: applicationInsights.outputs.InstrumentationKey
+    webAppName: webAppName
     containerRegistryUrl: containerRegistryUrl
+    ghostContainerImage: ghostContainerName
     containerMountPath: ghostContentFilesMountPath
-    databaseHostFQDN: mySQLServer.outputs.fullyQualifiedDomainName
-    // databaseLogin: '${databaseLogin}@${mySQLServer.outputs.name}'
+    mySQLServerName: mySQLServerName
+    databaseName: databaseName
     databaseLogin: databaseLogin
     databasePasswordSecretUri: keyVault.outputs.secretUri
-    databaseName: databaseName
     siteUrl: siteUrl
+    applicationInsightsName: applicationInsightsName
+    fileShareName: storageAccount.outputs.fileShareFullName
+    storageAccountName: storageAccountName
   }
   dependsOn: [
     webApp
@@ -174,7 +171,6 @@ module appServicePlan './modules/appServicePlan.bicep' = {
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
   }
   dependsOn: [
-    vNet
     logAnalyticsWorkspace
   ]
 }
@@ -211,22 +207,19 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
   ]
 }
 
-
 module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Web app with Azure Front Door') {
   name: 'FrontDoorDeploy'
   params: {
     frontDoorProfileName: frontDoorName
     applicationName: applicationNamePrefix
-    webAppName: webApp.outputs.name
+    webAppName: webAppName
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
   }
+  dependsOn: [
+    webApp
+    logAnalyticsWorkspace
+  ]
 }
 
-output webAppName string = webApp.outputs.name
-output webAppPrincipalId string = webApp.outputs.principalId
 output webAppHostName string = webApp.outputs.hostName
-output mySQLServerFQDN string = mySQLServer.outputs.fullyQualifiedDomainName
-
-var endpointHostName = (deploymentConfiguration == 'Web app with Azure Front Door') ? frontDoor.outputs.frontDoorEndpointHostName : webApp.outputs.hostName
-
-output endpointHostName string = endpointHostName
+output endpointHostName string = siteUrl

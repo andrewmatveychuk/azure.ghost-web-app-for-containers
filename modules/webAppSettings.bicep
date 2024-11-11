@@ -1,15 +1,15 @@
 targetScope = 'resourceGroup'
 
+@description('Web app to configure settings')
 param webAppName string
 
-param applicationInsightsInstrumentationKey string
+@description('Application Insights to use by web app')
+param applicationInsightsName string
 
-param applicationInsightsConnectionString string
+@description('MySQL server name')
+param mySQLServerName string
 
-@description('MySQL server hostname')
-param databaseHostFQDN string
-
-@description('Ghost datbase name')
+@description('Ghost database name')
 param databaseName string
 
 @description('Ghost database user name')
@@ -21,22 +21,67 @@ param databasePasswordSecretUri string
 @description('Website URL to autogenerate links by Ghost')
 param siteUrl string
 
-@description('Mount path for Ghost content files')
-param containerMountPath string
-
 @description('Container registry to pull Ghost docker image')
 param containerRegistryUrl string
+
+@description('Ghost container full image name and tag')
+param ghostContainerImage string
+
+@description('Storage account name to store Ghost content files')
+param storageAccountName string
+
+@description('File share name on the storage account to store Ghost content files')
+param fileShareName string
+
+@description('Path to mount the file share in the container')
+param containerMountPath string
+
+var containerImageReference = 'DOCKER|${ghostContainerImage}'
+
+resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
+  name: storageAccountName
+}
 
 resource existingWebApp 'Microsoft.Web/sites@2020-09-01' existing = {
   name: webAppName
 }
 
-resource webAppSettings 'Microsoft.Web/sites/config@2023-12-01' = {
+resource existingApplicationInsights 'Microsoft.Insights/components@2020-02-02' existing = {
+  name: applicationInsightsName
+}
+
+resource existingMySQLServer 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' existing = {
+  name: mySQLServerName
+}
+
+resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = {
+  parent: existingWebApp
+  name: 'web'
+  properties: {
+    http20Enabled: true
+    httpLoggingEnabled: true
+    minTlsVersion: '1.3'
+    ftpsState: 'Disabled'
+    linuxFxVersion: containerImageReference
+    alwaysOn: true
+    use32BitWorkerProcess: false
+    azureStorageAccounts: {
+      ContentFilesVolume: {
+        type: 'AzureFiles'
+        accountName: existingStorageAccount.name
+        shareName: fileShareName
+        mountPath: containerMountPath
+        accessKey: existingStorageAccount.listKeys().keys[0].value
+      }
+    }
+  }
+}
+
+resource appSettings 'Microsoft.Web/sites/config@2023-12-01' = {
   parent: existingWebApp
   name: 'appsettings'
   properties: {
-    APPINSIGHTS_INSTRUMENTATIONKEY: applicationInsightsInstrumentationKey
-    APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsightsConnectionString
+    APPLICATIONINSIGHTS_CONNECTION_STRING: existingApplicationInsights.properties.ConnectionString
     ApplicationInsightsAgent_EXTENSION_VERSION: '~2'
     XDT_MicrosoftApplicationInsights_Mode: 'default'
     WEBSITES_ENABLE_APP_SERVICE_STORAGE: 'false'
@@ -48,11 +93,10 @@ resource webAppSettings 'Microsoft.Web/sites/config@2023-12-01' = {
     privacy_useUpdateCheck: 'false'
     url: siteUrl
     database__client: 'mysql'
-    database__connection__host: databaseHostFQDN
+    database__connection__host: existingMySQLServer.properties.fullyQualifiedDomainName
     database__connection__user: databaseLogin
     database__connection__password: '@Microsoft.KeyVault(SecretUri=${databasePasswordSecretUri})'
     database__connection__database: databaseName
-    // database__connection__ssl_minVersion: 'TLSv1.2'
     database__connection__ssl__ca: '''
 -----BEGIN CERTIFICATE-----
 MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh
