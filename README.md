@@ -23,6 +23,7 @@ All resources have their diagnostic settings configured to stream resource logs 
 
 For the complete list of settings, please refer to the following blog posts:
 
+* [Ghost on Azure: Project Update. New Ghost 5 image, Azure MySQL Flexible Server, Azure Private Link, RBAC for Key Vault, and App Service access restrictions to Azure Front Door](https://andrewmatveychuk.com/ghost-on-azure-project-update/)
 * [How to connect to Azure Database for MySQL from Ghost container](https://andrewmatveychuk.com/how-to-connect-to-azure-database-for-mysql-from-ghost-container/)
 * [Ghost deployment on Azure: Security Hardening](https://andrewmatveychuk.com/ghost-deployment-on-azure-security-hardening/)
 * [A one-click Ghost deployment on Azure Web App for Containers](https://andrewmatveychuk.com/a-one-click-ghost-deployment-on-azure-web-app-for-containers/)
