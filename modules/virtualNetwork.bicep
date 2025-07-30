@@ -5,9 +5,6 @@ targetScope = 'resourceGroup'
 param vNetName string
 param vNetAddressPrefix string
 
-param webAppIntegrationSubnetName string
-param webAppIntegrationSubnetPrefix string
-
 param privateEndpointsSubnetName string
 param privateEndpointsSubnetPrefix string
 
@@ -24,20 +21,6 @@ resource vNet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
       ]
     }
     subnets: [
-      {
-        name: webAppIntegrationSubnetName
-        properties: {
-          addressPrefix: webAppIntegrationSubnetPrefix
-          delegations: [
-            {
-              name: 'delegation'
-              properties: {
-                serviceName: 'Microsoft.Web/serverFarms'
-              }
-            }
-          ]
-        }
-      }
       {
         name: privateEndpointsSubnetName
         properties: {
