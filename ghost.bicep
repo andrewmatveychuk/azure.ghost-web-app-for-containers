@@ -35,18 +35,15 @@ param containerRegistryUrl string = 'https://index.docker.io/v1'
 param deploymentConfiguration string = 'Web app only'
 
 @description('Virtual network address prefix to use')
-param vnetAddressPrefix string = '10.0.0.0/23'
-@description('Address prefix for private links subnet')
-var privateEndpointsSubnetPrefix string = '10.0.0.0/28'
+param vnetAddressPrefix string = '10.0.0.0/26'
 @description('Address prefix for web app integration subnet')
-// https://learn.microsoft.com/en-us/azure/app-service/overview-vnet-integration#subnet-requirements
-var webAppIntegrationSubnetPrefix string = '10.0.0.16/28' // The the minimum subnet size required for Azure App Service virtual network integration
-@description('Address prefix for container app integration subnet')
-// https://learn.microsoft.com/en-us/azure/container-apps/custom-virtual-networks?tabs=consumption-only-env#subnet
-var containerAppIntegrationSubnetPrefix string = '10.0.0.16/23' // The the minimum subnet size required for virtual network integration in Container Apps consumption-only environments
+param webAppIntegrationSubnetPrefix string = '10.0.0.0/28'
+@description('Address prefix for private links subnet')
+param privateEndpointsSubnetPrefix string = '10.0.0.16/28'
 
 var vNetName = '${applicationNamePrefix}-vnet-${uniqueString(resourceGroup().id)}'
 var privateEndpointsSubnetName = 'privateEndpointsSubnet'
+var webAppIntegrationSubnetName = 'webAppIntegrationSubnet'
 var webAppName = '${applicationNamePrefix}-web-${uniqueString(resourceGroup().id)}'
 var appServicePlanName = '${applicationNamePrefix}-asp-${uniqueString(resourceGroup().id)}'
 var logAnalyticsWorkspaceName = '${applicationNamePrefix}-la-${uniqueString(resourceGroup().id)}'
@@ -61,7 +58,7 @@ var databaseName = 'ghost'
 var ghostContentFileShareName = 'contentfiles'
 var ghostContentFilesMountPath = '/var/lib/ghost/content_files'
 var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door')
-  ? 'https://${frontDoor!.outputs.frontDoorEndpointHostName}'
+  ? 'https://${frontDoor.outputs.frontDoorEndpointHostName}'
   : 'https://${webApp.outputs.hostName}'
 
 //Web app with Azure Front Door
@@ -74,6 +71,8 @@ module vNet 'modules/virtualNetwork.bicep' = {
     vNetAddressPrefix: vnetAddressPrefix
     privateEndpointsSubnetName: privateEndpointsSubnetName
     privateEndpointsSubnetPrefix: privateEndpointsSubnetPrefix
+    webAppIntegrationSubnetName: webAppIntegrationSubnetName
+    webAppIntegrationSubnetPrefix: webAppIntegrationSubnetPrefix
     location: location
   }
 }
@@ -131,7 +130,7 @@ module webApp './modules/webApp.bicep' = {
     location: location
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     vNetName: vNetName
-    webAppIntegrationSubnetPrefix: webAppIntegrationSubnetPrefix
+    webAppIntegrationSubnetName: webAppIntegrationSubnetName
   }
   dependsOn: [
     appServicePlan
