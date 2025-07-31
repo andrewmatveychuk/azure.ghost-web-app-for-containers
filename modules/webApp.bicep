@@ -39,16 +39,16 @@ param vNetName string
 @description('Target subnet to integrate web app')
 param webAppIntegrationSubnetName string
 
-resource existingvNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
   name: vNetName
 }
 
 resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
   name: webAppIntegrationSubnetName
-  parent: existingvNet
+  parent: existingVNet
 }
 
-resource webApp_vNetIntegration 'Microsoft.Web/sites/networkConfig@2023-12-01' = {
+resource webApp_VNetIntegration 'Microsoft.Web/sites/networkConfig@2023-12-01' = {
   parent: webApp
   name: 'virtualNetwork'
   properties: {

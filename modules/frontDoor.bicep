@@ -10,7 +10,7 @@ param applicationName string
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-@description('Web app to confire Front Door for')
+@description('Web app to configure Front Door for')
 param webAppName string
 
 var frontDoorEndpointName = applicationName

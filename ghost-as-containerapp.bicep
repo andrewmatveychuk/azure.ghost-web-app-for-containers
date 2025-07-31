@@ -29,23 +29,25 @@ param ghostContainerName string = 'andrewmatveychuk/ghost-ai:latest'
 param containerRegistryUrl string = 'https://index.docker.io/v1'
 
 @allowed([
-  'Web app only'
-  'Web app with Azure Front Door'
+  'Container app only'
+  'Container app with Azure Front Door Premium'
 ])
-param deploymentConfiguration string = 'Web app only'
+param deploymentConfiguration string = 'Container app only'
 
 @description('Virtual network address prefix to use')
-param vnetAddressPrefix string = '10.0.0.0/26'
-@description('Address prefix for web app integration subnet')
-param webAppIntegrationSubnetPrefix string = '10.0.0.0/28'
+param vNetAddressPrefix string = '10.0.0.0/22'
 @description('Address prefix for private links subnet')
-param privateEndpointsSubnetPrefix string = '10.0.0.16/28'
+param privateEndpointsSubnetPrefix string = '10.0.3.240/28'
+@description('Address prefix for integration subnet')
+param integrationSubnetPrefix string = '10.0.0.0/23'
 
 var vNetName = '${applicationNamePrefix}-vnet-${uniqueString(resourceGroup().id)}'
 var privateEndpointsSubnetName = 'privateEndpointsSubnet'
-var webAppIntegrationSubnetName = 'webAppIntegrationSubnet'
-var webAppName = '${applicationNamePrefix}-web-${uniqueString(resourceGroup().id)}'
-var appServicePlanName = '${applicationNamePrefix}-asp-${uniqueString(resourceGroup().id)}'
+var integrationSubnetName = 'integrationSubnet'
+var delegatedServiceName = 'Microsoft.App/managedEnvironments'
+
+var containerAppName = '${applicationNamePrefix}-capp-${uniqueString(resourceGroup().id)}'
+var containerAppEnvironmentName = '${applicationNamePrefix}-cenv-${uniqueString(resourceGroup().id)}'
 var logAnalyticsWorkspaceName = '${applicationNamePrefix}-la-${uniqueString(resourceGroup().id)}'
 var applicationInsightsName = '${applicationNamePrefix}-ai-${uniqueString(resourceGroup().id)}'
 var keyVaultName = '${applicationNamePrefix}-kv-${uniqueString(resourceGroup().id)}'
@@ -57,22 +59,23 @@ var databaseName = 'ghost'
 
 var ghostContentFileShareName = 'contentfiles'
 var ghostContentFilesMountPath = '/var/lib/ghost/content_files'
-var siteUrl = (deploymentConfiguration == 'Web app with Azure Front Door')
-  ? 'https://${frontDoor.outputs.frontDoorEndpointHostName}'
-  : 'https://${webApp.outputs.hostName}'
+var siteUrl = (deploymentConfiguration == 'Container app with Azure Front Door Premium')
+  ? 'https://${frontDoor!.outputs.frontDoorEndpointHostName}'
+  : 'https://${containerApp.outputs.hostName}'
 
 //Web app with Azure Front Door
 var frontDoorName = '${applicationNamePrefix}-afd-${uniqueString(resourceGroup().id)}'
 
-module vNet 'modules/virtualNetwork.bicep' = {
+module vNet './modules/virtualNetwork.bicep' = {
   name: 'vNetDeploy'
   params: {
     vNetName: vNetName
-    vNetAddressPrefix: vnetAddressPrefix
+    vNetAddressPrefix: vNetAddressPrefix
     privateEndpointsSubnetName: privateEndpointsSubnetName
     privateEndpointsSubnetPrefix: privateEndpointsSubnetPrefix
-    webAppIntegrationSubnetName: webAppIntegrationSubnetName
-    webAppIntegrationSubnetPrefix: webAppIntegrationSubnetPrefix
+    integrationSubnetName: integrationSubnetName
+    integrationSubnetPrefix: integrationSubnetPrefix
+    delegatedServiceName: delegatedServiceName
     location: location
   }
 }
@@ -86,7 +89,7 @@ module logAnalyticsWorkspace './modules/logAnalyticsWorkspace.bicep' = {
   }
 }
 
-module storageAccount 'modules/storageAccount.bicep' = {
+module storageAccount './modules/storageAccount.bicep' = {
   name: 'storageAccountDeploy'
   params: {
     storageAccountName: storageAccountName
@@ -113,36 +116,32 @@ module keyVault './modules/keyVault.bicep' = {
     location: location
     vNetName: vNetName
     privateEndpointsSubnetName: privateEndpointsSubnetName
-    webAppName: webAppName
+    webAppName: containerAppName
   }
   dependsOn: [
-    webApp
+    // containerApp
     vNet
     logAnalyticsWorkspace
   ]
 }
 
-module webApp './modules/webApp.bicep' = {
-  name: 'webAppDeploy'
+module containerApp './modules/containerApp.bicep' = {
+  name: 'containerAppDeploy'
   params: {
-    webAppName: webAppName
-    appServicePlanName: appServicePlanName
-    location: location
-    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
-    vNetName: vNetName
-    webAppIntegrationSubnetName: webAppIntegrationSubnetName
+    containerAppEnvironmentName: containerAppEnvironmentName
+    containerAppName: containerAppName
+    containerImage: ghostContainerName
   }
   dependsOn: [
-    appServicePlan
+    // containerAppEnvironment
     vNet
-    logAnalyticsWorkspace
   ]
 }
 
-module webAppSettings 'modules/webAppSettings.bicep' = {
+module webAppSettings './modules/webAppSettings.bicep' = {
   name: 'webAppSettingsDeploy'
   params: {
-    webAppName: webAppName
+    webAppName: containerAppName
     containerRegistryUrl: containerRegistryUrl
     ghostContainerImage: ghostContainerName
     containerMountPath: ghostContentFilesMountPath
@@ -156,22 +155,26 @@ module webAppSettings 'modules/webAppSettings.bicep' = {
     storageAccountName: storageAccountName
   }
   dependsOn: [
-    webApp
+    containerApp
     frontDoor
     mySQLServer
   ]
 }
 
-module appServicePlan './modules/appServicePlan.bicep' = {
-  name: 'appServicePlanDeploy'
+module containerAppEnvironment './modules/containerAppEnvironment.bicep' = {
+  name: 'containerAppEnvironmentDeploy'
   params: {
-    appServicePlanName: appServicePlanName
-    appServicePlanSku: appServicePlanSku
     location: location
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+    applicationInsightsName: applicationInsightsName
+    containerAppName: containerAppName
+    integrationSubnetName: integrationSubnetName
+    vNetName: vNetName
   }
   dependsOn: [
     logAnalyticsWorkspace
+    applicationInsights
+    vNet
   ]
 }
 
@@ -181,15 +184,15 @@ module applicationInsights './modules/applicationInsights.bicep' = {
     applicationInsightsName: applicationInsightsName
     location: location
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
-    webAppName: webAppName
+    webAppName: containerAppName
   }
   dependsOn: [
-    webApp
+    containerApp
     logAnalyticsWorkspace
   ]
 }
 
-module mySQLServer 'modules/mySQLServer.bicep' = {
+module mySQLServer './modules/mySQLServer.bicep' = {
   name: 'mySQLServerDeploy'
   params: {
     administratorLogin: databaseLogin
@@ -207,19 +210,19 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
   ]
 }
 
-module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Web app with Azure Front Door') {
+module frontDoor './modules/frontDoor.bicep' = if (deploymentConfiguration == 'Container app with Azure Front Door Premium') {
   name: 'FrontDoorDeploy'
   params: {
     frontDoorProfileName: frontDoorName
     applicationName: applicationNamePrefix
-    webAppName: webAppName
+    webAppName: containerAppName
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
   }
   dependsOn: [
-    webApp
+    containerApp
     logAnalyticsWorkspace
   ]
 }
 
-output webAppHostName string = webApp.outputs.hostName
+output webAppHostName string = containerApp.outputs.hostName
 output endpointHostName string = siteUrl
