@@ -2,13 +2,13 @@ targetScope = 'resourceGroup'
 
 @minLength(2)
 @maxLength(32)
-param containerAppName string
+param containerAppEnvironmentName string
 
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
 @description('Specifies whether the environment only has an internal load balancer')
-param internal bool = false
+param internal bool
 
 // Configuring logging
 @description('Log Analytics workspace to use for diagnostics settings')
@@ -28,20 +28,33 @@ resource existingApplicationInsights 'Microsoft.Insights/components@2020-02-02' 
 // Configuring virtual network integration
 @description('Virtual network for a private endpoint')
 param vNetName string
-@description('Target subnet to integrate web app')
+@description('Target subnet name to integrate the environment')
 param integrationSubnetName string
+@description('Target subnet prefix to integrate the environment')
+param integrationSubnetPrefix string
 
 resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
   name: vNetName
 }
 
-resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+resource integrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' = {
   name: integrationSubnetName
   parent: existingVNet
+  properties: {
+    addressPrefix: integrationSubnetPrefix
+    delegations: [
+      {
+        name: 'containerAppEnvironmentDelegation'
+        properties: {
+          serviceName: 'Microsoft.App/environments'
+        }
+      }
+    ]
+  }
 }
 
 resource containerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-preview' = {
-  name: '${containerAppName}-env'
+  name: containerAppEnvironmentName
   location: location
   properties: {
     appLogsConfiguration: {
@@ -56,8 +69,15 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-prev
     }
     vnetConfiguration: {
       internal: internal
-      infrastructureSubnetId: existingSubnet.id
+      infrastructureSubnetId: integrationSubnet.id
     }
     zoneRedundant: true
+    // https://learn.microsoft.com/en-us/azure/container-apps/environment-type-consumption-only
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
   }
 }

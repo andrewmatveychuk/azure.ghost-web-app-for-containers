@@ -20,8 +20,11 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-@description('Web App name to provide access to Key Vault')
-param webAppName string
+@description('Service principal name to provide access to Key Vault')
+param principalName string
+
+@description('Service principal ID to provide access to Key Vault')
+param principalId string
 
 resource keyVault 'Microsoft.KeyVault/vaults@2024-04-01-preview' = {
   name: keyVaultName
@@ -52,16 +55,12 @@ var roleIdMapping = {
   'Key Vault Secrets User': '4633458b-17de-408a-b874-0445c86b69e6'
 }
 
-resource existingWebApp 'Microsoft.Web/sites@2023-12-01' existing = {
-  name: webAppName
-}
-
 resource kvRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(roleIdMapping['Key Vault Secrets User'], existingWebApp.name, keyVault.name)
+  name: guid(roleIdMapping['Key Vault Secrets User'], principalName, keyVault.name)
   scope: keyVault
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleIdMapping['Key Vault Secrets User'])
-    principalId: existingWebApp.identity.principalId
+    principalId: principalId
     principalType: 'ServicePrincipal'
   }
 }

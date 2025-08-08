@@ -4,6 +4,9 @@ targetScope = 'resourceGroup'
 @maxLength(64)
 param frontDoorProfileName string
 
+@description('Location to deploy the resources')
+param location string = resourceGroup().location
+
 @description('Application name')
 param applicationName string
 
@@ -13,20 +16,98 @@ param logAnalyticsWorkspaceName string
 @description('Web app to configure Front Door for')
 param webAppName string
 
+param containerAppEnvironmentName string
+
 var frontDoorEndpointName = applicationName
 var frontDoorOriginGroupName = '${applicationName}-OriginGroup'
 var frontDoorOriginName = '${applicationName}-Origin'
 var frontDoorRouteName = '${applicationName}-Route'
 
-resource frontDoorProfile 'Microsoft.Cdn/profiles@2024-02-01' = {
-  name: frontDoorProfileName
-  location: 'global'
-  sku: {
-    name: 'Standard_AzureFrontDoor'
+var managedLoadBalancerName = 'capp-svc-lb' // This is hardcoded as a managed resource
+
+resource existingContainerAppEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-preview' existing = {
+  name: containerAppEnvironmentName
+}
+
+// ME_ghost-cenv-227pxybnua5y2_ghost-5-rg_westeurope
+var managedLoadBalancerResourceGroupName = 'ME_${containerAppEnvironmentName}_${resourceGroup().name}_${existingContainerAppEnvironment.location}'
+
+output appEnvironmentResourceGroupName string = managedLoadBalancerResourceGroupName
+
+resource loadBalancer 'Microsoft.Network/loadBalancers@2023-11-01' existing = {
+  name: managedLoadBalancerName
+  scope: resourceGroup(managedLoadBalancerResourceGroupName)
+}
+
+// Configuring private link service for Front Door
+@description('Virtual network for a private endpoint')
+param vNetName string
+@description('Target subnet to create a private endpoint')
+param privateEndpointsSubnetName string
+@description('Name of the pricing tier.')
+param frontDoorSku string = 'Premium_AzureFrontDoor'
+
+resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+  name: vNetName
+}
+
+resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+  name: privateEndpointsSubnetName
+  parent: existingVNet
+}
+
+var privateLinkServiceName = '${applicationName}-pls-${uniqueString(resourceGroup().id)}'
+
+resource privateLinkService 'Microsoft.Network/privateLinkServices@2024-07-01' = {
+  name: privateLinkServiceName
+  location: location
+  properties: {
+    autoApproval: {
+      subscriptions: [
+        subscription().subscriptionId
+      ]
+    }
+    visibility: {
+      subscriptions: [
+        subscription().subscriptionId
+      ]
+    }
+    fqdns: []
+    enableProxyProtocol: false
+    loadBalancerFrontendIpConfigurations: [
+      {
+        id: '${loadBalancer.id}/frontendIPConfigurations/${loadBalancer.name}fe'
+      }
+    ]
+    ipConfigurations: [
+      {
+        name: 'ipconfig-0'
+        properties: {
+          privateIPAllocationMethod: 'Dynamic'
+          subnet: {
+            id: existingSubnet.id
+          }
+          primary: true
+          privateIPAddressVersion: 'IPv4'
+        }
+      }
+    ]
   }
 }
 
-resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' = {
+// Configuring Front Door profile and endpoint
+
+//++
+resource frontDoorProfile 'Microsoft.Cdn/profiles@2025-06-01' = {
+  name: frontDoorProfileName
+  location: 'global'
+  sku: {
+    name: frontDoorSku
+  }
+}
+
+//++
+resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2025-06-01' = {
   name: frontDoorEndpointName
   parent: frontDoorProfile
   location: 'global'
@@ -35,7 +116,7 @@ resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' = {
   }
 }
 
-resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2024-02-01' = {
+resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2025-06-01' = {
   name: frontDoorOriginGroupName
   parent: frontDoorProfile
   properties: {
@@ -49,6 +130,7 @@ resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2024-02-01' =
       probeProtocol: 'Https'
       probeIntervalInSeconds: 120
     }
+    sessionAffinityState: 'Disabled'
   }
 }
 
@@ -66,9 +148,18 @@ resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01
     originHostHeader: existingWebApp.properties.defaultHostName
     priority: 1
     weight: 1000
+    sharedPrivateLinkResource: {
+      privateLink: {
+        id: privateLinkService.id
+      }
+      privateLinkLocation: privateLinkService.location
+      status: 'Approved'
+      requestMessage: 'Please approve this request to allow Front Door to access the container app'
+    }
+    enforceCertificateNameCheck: true
   }
 }
-
+//++
 resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = {
   name: frontDoorRouteName
   parent: frontDoorEndpoint

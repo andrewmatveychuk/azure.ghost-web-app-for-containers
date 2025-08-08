@@ -13,7 +13,10 @@ param minReplicas int = 1
 param maxReplicas int = 3
 
 @description('Container image to use')
-param containerImage string
+param containerImageUrl string
+
+@description('Container port')
+param containerPort int
 
 @description('Container environment variables')
 param containerEnvVars array = []
@@ -39,7 +42,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
     configuration: {
       ingress: {
         external: true
-        targetPort: 80
+        targetPort: containerPort
         transport: 'http'
         allowInsecure: false
       }
@@ -47,10 +50,11 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
     template: {
       containers: [
         {
-          image: containerImage
+          image: containerImageUrl
           name: containerAppName
           env: containerEnvVars
           volumeMounts: containerVolumeMounts
+
         }
       ]
       volumes:containerVolumes
@@ -61,3 +65,5 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
     }
   }
 }
+
+output hostName string = containerApp.properties.configuration.ingress.fqdn
