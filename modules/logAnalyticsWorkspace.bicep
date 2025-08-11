@@ -14,7 +14,7 @@ param logAnalyticsWorkspaceSku string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' = {
   name: logAnalyticsWorkspaceName
   location: location
   properties: {

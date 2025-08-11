@@ -1,5 +1,6 @@
 targetScope = 'resourceGroup'
 
+// General parameters
 @minLength(5)
 @maxLength(64)
 param frontDoorProfileName string
@@ -13,39 +14,28 @@ param applicationName string
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-@description('Web app to configure Front Door for')
-param webAppName string
-
+// Configuring private link service for Front Door
+@description('Container App Environment to configure Private Link service for')
 param containerAppEnvironmentName string
 
-var frontDoorEndpointName = applicationName
-var frontDoorOriginGroupName = '${applicationName}-OriginGroup'
-var frontDoorOriginName = '${applicationName}-Origin'
-var frontDoorRouteName = '${applicationName}-Route'
-
-var managedLoadBalancerName = 'capp-svc-lb' // This is hardcoded as a managed resource
-
-resource existingContainerAppEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-preview' existing = {
-  name: containerAppEnvironmentName
-}
-
-// ME_ghost-cenv-227pxybnua5y2_ghost-5-rg_westeurope
-var managedLoadBalancerResourceGroupName = 'ME_${containerAppEnvironmentName}_${resourceGroup().name}_${existingContainerAppEnvironment.location}'
+var managedLoadBalancerName = 'capp-svc-lb' // This is hardcoded as a managed resource by Microsoft
+// Sample managed resource group name for COntainer App Environment: ME_ghost-cenv-227pxybnua5y2_ghost-5-rg_westeurope
+var managedLoadBalancerResourceGroupName = 'ME_${containerAppEnvironmentName}_${resourceGroup().name}_${location}'
 
 output appEnvironmentResourceGroupName string = managedLoadBalancerResourceGroupName
 
-resource loadBalancer 'Microsoft.Network/loadBalancers@2023-11-01' existing = {
+resource existingLoadBalancer 'Microsoft.Network/loadBalancers@2024-07-01' existing = {
   name: managedLoadBalancerName
   scope: resourceGroup(managedLoadBalancerResourceGroupName)
 }
 
-// Configuring private link service for Front Door
+var existingLoadBalancerFrontendIPConfigResourceId = '${existingLoadBalancer.id}/frontendIPConfigurations/${existingLoadBalancer.name}fe' // The configuration name is hardcoded as a managed resource by Microsoft
+
 @description('Virtual network for a private endpoint')
 param vNetName string
 @description('Target subnet to create a private endpoint')
 param privateEndpointsSubnetName string
-@description('Name of the pricing tier.')
-param frontDoorSku string = 'Premium_AzureFrontDoor'
+
 
 resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
   name: vNetName
@@ -76,7 +66,7 @@ resource privateLinkService 'Microsoft.Network/privateLinkServices@2024-07-01' =
     enableProxyProtocol: false
     loadBalancerFrontendIpConfigurations: [
       {
-        id: '${loadBalancer.id}/frontendIPConfigurations/${loadBalancer.name}fe'
+        id: existingLoadBalancerFrontendIPConfigResourceId
       }
     ]
     ipConfigurations: [
@@ -96,6 +86,15 @@ resource privateLinkService 'Microsoft.Network/privateLinkServices@2024-07-01' =
 }
 
 // Configuring Front Door profile and endpoint
+
+var frontDoorEndpointName = applicationName
+var frontDoorOriginGroupName = '${applicationName}-OriginGroup'
+var frontDoorOriginName = '${applicationName}-Origin'
+@description('A FQDN of the origin for Front Door')
+param frontDoorOriginHostName string
+var frontDoorRouteName = '${applicationName}-Route'
+@description('Name of Azure Front Door pricing tier.')
+param frontDoorSku string = 'Premium_AzureFrontDoor'
 
 //++
 resource frontDoorProfile 'Microsoft.Cdn/profiles@2025-06-01' = {
@@ -134,18 +133,14 @@ resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2025-06-01' =
   }
 }
 
-resource existingWebApp 'Microsoft.Web/sites@2023-12-01' existing = {
-  name: webAppName
-}
-
 resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01' = {
   name: frontDoorOriginName
   parent: frontDoorOriginGroup
   properties: {
-    hostName: existingWebApp.properties.defaultHostName
+    hostName: frontDoorOriginHostName
     httpPort: 80
     httpsPort: 443
-    originHostHeader: existingWebApp.properties.defaultHostName
+    originHostHeader: frontDoorOriginHostName
     priority: 1
     weight: 1000
     sharedPrivateLinkResource: {
@@ -264,25 +259,25 @@ resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-
   }
 }
 
-resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = {
-  parent: existingWebApp
-  name: 'web'
-  properties: {
-    ipSecurityRestrictions: [
-      {
-        ipAddress: 'AzureFrontDoor.Backend'
-        action: 'Allow'
-        tag: 'ServiceTag'
-        priority: 100
-        name: 'Allow traffic from Front Door'
-        headers: {
-          'x-azure-fdid': [
-            frontDoorProfile.properties.frontDoorId //Scoping access to a unique Front Door instance
-          ]
-        }
-      }
-    ]
-  }
-}
+// resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = {
+//   parent: existingWebApp
+//   name: 'web'
+//   properties: {
+//     ipSecurityRestrictions: [
+//       {
+//         ipAddress: 'AzureFrontDoor.Backend'
+//         action: 'Allow'
+//         tag: 'ServiceTag'
+//         priority: 100
+//         name: 'Allow traffic from Front Door'
+//         headers: {
+//           'x-azure-fdid': [
+//             frontDoorProfile.properties.frontDoorId //Scoping access to a unique Front Door instance
+//           ]
+//         }
+//       }
+//     ]
+//   }
+// }
 
 output frontDoorEndpointHostName string = frontDoorEndpoint.properties.hostName

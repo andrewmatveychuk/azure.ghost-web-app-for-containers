@@ -20,7 +20,7 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   name: storageAccountName
   location: location
   kind: 'StorageV2'
@@ -29,12 +29,13 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
   properties: {
     supportsHttpsTrafficOnly: true
-    minimumTlsVersion: 'TLS1_3'
+    minimumTlsVersion: 'TLS1_2'
     publicNetworkAccess: 'Disabled'
   }
 }
 
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+// Configuring diagnostics settings for Storage Account
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -51,8 +52,10 @@ resource storageAccountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-0
     ]
   }
 }
+// End of configuring diagnostics settings for Storage Account
 
-resource fileServices 'Microsoft.Storage/storageAccounts/fileServices@2023-05-01' = {
+// Configuring file services and file share
+resource fileServices 'Microsoft.Storage/storageAccounts/fileServices@2025-01-01' = {
   parent: storageAccount
   name: 'default'
 }
@@ -85,18 +88,20 @@ resource fileServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-
   }
 }
 
-resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01' = {
+resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2025-01-01' = {
   parent: fileServices
   name: fileShareFolderName
 }
+// End of configuring file services and file share
 
 // Configuring private endpoint
 @description('Virtual network for a private endpoint')
 param vNetName string
 @description('Target subnet to create a private endpoint')
 param privateEndpointsSubnetName string
+@description('File share private endpoint name')
+param privateEndpointName string = 'ghost-pl-file-${uniqueString(resourceGroup().id)}'
 
-var privateEndpointName = 'ghost-pl-file-${uniqueString(resourceGroup().id)}'
 var privateDnsZoneName = 'privatelink.file.${environment().suffixes.storage}'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/file'
 

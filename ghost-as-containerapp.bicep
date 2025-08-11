@@ -27,49 +27,35 @@ param ghostContainerName string = 'azuredocs/containerapps-helloworld:latest'
 // param containerRegistryName string = 'docker.io'
 param containerRegistryName string = 'mcr.microsoft.com'
 
-var containerImageURL = '${containerRegistryName}/${ghostContainerName}'
-// var containerPort = 2368
-var containerPort = 80
-
+@description('Container App deployment configuration')
 @allowed([
-  'Container app only'
-  'Container app with Azure Front Door Premium'
+  'Container app only (public access)'
+  'Container app (private) with Azure Front Door Premium (private link access)'
 ])
-param deploymentConfiguration string = 'Container app only'
-
-
+param deploymentConfiguration string = 'Container app only (public access)'
 
 @description('Virtual network address prefix to use')
 param vNetAddressPrefix string = '10.0.0.0/22'
 @description('Address prefix for private links subnet')
 param privateEndpointsSubnetPrefix string = '10.0.3.240/28'
 @description('Address prefix for integration subnet')
-param integrationSubnetPrefix string = '10.0.0.0/23'
+param integrationSubnetPrefix string = '10.0.0.0/27' // Minimal subnet size for Container App Environment with workload profiles
 
-var vNetName = '${applicationNamePrefix}-vnet-${uniqueString(resourceGroup().id)}'
-var privateEndpointsSubnetName = 'privateEndpointsSubnet'
-var integrationSubnetName = 'integrationSubnet'
-var delegatedServiceName = '' //'Microsoft.App/environments'
 
-var containerAppName = '${applicationNamePrefix}-capp-${uniqueString(resourceGroup().id)}'
-var containerAppEnvironmentName = '${applicationNamePrefix}-cenv-${uniqueString(resourceGroup().id)}'
-var logAnalyticsWorkspaceName = '${applicationNamePrefix}-la-${uniqueString(resourceGroup().id)}'
-var applicationInsightsName = '${applicationNamePrefix}-ai-${uniqueString(resourceGroup().id)}'
-var keyVaultName = '${applicationNamePrefix}-kv-${uniqueString(resourceGroup().id)}'
-var storageAccountName = '${applicationNamePrefix}stor${uniqueString(resourceGroup().id)}'
 
-var mySQLServerName = '${applicationNamePrefix}-mysql-${uniqueString(resourceGroup().id)}'
-var databaseLogin = 'ghost'
-var databaseName = 'ghost'
+
 
 var ghostContentFileShareName = 'contentfiles'
 var ghostContentFilesMountPath = '/var/lib/ghost/content_files'
 /* var siteUrl = (deploymentConfiguration == 'Container app with Azure Front Door Premium')
-  ? 'https://${frontDoor!.outputs.frontDoorEndpointHostName}'
-  : 'https://${containerApp.outputs.hostName}'
- */
+? 'https://${frontDoor!.outputs.frontDoorEndpointHostName}'
+: 'https://${containerApp.outputs.hostName}'
+*/
 //Web app with Azure Front Door
-var frontDoorName = '${applicationNamePrefix}-afd-${uniqueString(resourceGroup().id)}'
+
+// Creating the virtual network and the subnet for private endpoints
+var vNetName = '${applicationNamePrefix}-vnet-${uniqueString(resourceGroup().id)}'
+var privateEndpointsSubnetName = 'pe-subnet'
 
 module vNet './modules/virtualNetwork.bicep' = {
   name: 'vNetDeploy'
@@ -82,6 +68,9 @@ module vNet './modules/virtualNetwork.bicep' = {
   }
 }
 
+// Creating the Log Analytics workspace
+var logAnalyticsWorkspaceName = '${applicationNamePrefix}-la-${uniqueString(resourceGroup().id)}'
+
 module logAnalyticsWorkspace './modules/logAnalyticsWorkspace.bicep' = {
   name: 'logAnalyticsWorkspaceDeploy'
   params: {
@@ -90,6 +79,25 @@ module logAnalyticsWorkspace './modules/logAnalyticsWorkspace.bicep' = {
     location: location
   }
 }
+
+// Creating the Application Insights
+var applicationInsightsName = '${applicationNamePrefix}-ai-${uniqueString(resourceGroup().id)}'
+
+module applicationInsights './modules/applicationInsights.bicep' = {
+  name: 'applicationInsightsDeploy'
+  params: {
+    applicationInsightsName: applicationInsightsName
+    location: location
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+  }
+  dependsOn: [
+    logAnalyticsWorkspace
+  ]
+}
+
+// Creating the Storage account to be used as a persistent storage for the Container App
+var storageAccountName = '${applicationNamePrefix}stor${uniqueString(resourceGroup().id)}'
+var privateEndpointName = '${applicationNamePrefix}-pe-file-${uniqueString(resourceGroup().id)}'
 
 module storageAccount './modules/storageAccount.bicep' = {
   name: 'storageAccountDeploy'
@@ -101,6 +109,7 @@ module storageAccount './modules/storageAccount.bicep' = {
     location: location
     vNetName: vNetName
     privateEndpointsSubnetName: privateEndpointsSubnetName
+    privateEndpointName: privateEndpointName
   }
   dependsOn: [
     vNet
@@ -108,7 +117,11 @@ module storageAccount './modules/storageAccount.bicep' = {
   ]
 }
 
-/* module keyVault './modules/keyVault.bicep' = {
+/*
+// Creating the Key Vault to store the database password
+var keyVaultName = '${applicationNamePrefix}-kv-${uniqueString(resourceGroup().id)}'
+
+module keyVault './modules/keyVault.bicep' = {
   name: 'keyVaultDeploy'
   params: {
     keyVaultName: keyVaultName
@@ -128,6 +141,44 @@ module storageAccount './modules/storageAccount.bicep' = {
   ]
 } */
 
+// Creating the Container App Environment
+var containerAppEnvironmentName = '${applicationNamePrefix}-cenv-${uniqueString(resourceGroup().id)}'
+
+module containerAppEnvironment './modules/containerAppEnvironment.bicep' = {
+  name: 'containerAppEnvironmentDeploy'
+  params: {
+    location: location
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+    applicationInsightsName: applicationInsightsName
+    containerAppEnvironmentName: containerAppEnvironmentName
+    integrationSubnetPrefix: integrationSubnetPrefix
+    vNetName: vNetName
+    internal: true
+  }
+  dependsOn: [
+    logAnalyticsWorkspace
+    applicationInsights
+    vNet
+  ]
+}
+
+// Creating the Container App
+var containerAppName = '${applicationNamePrefix}-capp-${uniqueString(resourceGroup().id)}'
+var containerImageURL = '${containerRegistryName}/${ghostContainerName}'
+var containerPort = 80 //2368 for Ghost, 80 for azuredocs sample
+// var containerVariables = [
+//   {
+//     name: 'NODE_ENV'
+//     value: 'development'
+//   }
+//   {
+//     name: 'url'
+//     value:
+//       : 'https://${containerApp.outputs.hostName}'
+//   }
+// ]
+
+
 module containerApp './modules/containerApp.bicep' = {
   name: 'containerAppDeploy'
   params: {
@@ -141,40 +192,12 @@ module containerApp './modules/containerApp.bicep' = {
   ]
 }
 
+/* // Creating the MySQL server and the database to be used by the Container App
+var mySQLServerName = '${applicationNamePrefix}-mysql-${uniqueString(resourceGroup().id)}'
+var databaseLogin = applicationNamePrefix
+var databaseName = applicationNamePrefix
 
-module containerAppEnvironment './modules/containerAppEnvironment.bicep' = {
-  name: 'containerAppEnvironmentDeploy'
-  params: {
-    location: location
-    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
-    applicationInsightsName: applicationInsightsName
-    containerAppEnvironmentName: containerAppEnvironmentName
-    integrationSubnetName: integrationSubnetName
-    integrationSubnetPrefix: integrationSubnetPrefix
-    vNetName: vNetName
-    internal: true
-  }
-  dependsOn: [
-    logAnalyticsWorkspace
-    applicationInsights
-    vNet
-  ]
-}
-
-module applicationInsights './modules/applicationInsights.bicep' = {
-  name: 'applicationInsightsDeploy'
-  params: {
-    applicationInsightsName: applicationInsightsName
-    location: location
-    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
-    webAppName: containerAppName
-  }
-  dependsOn: [
-    logAnalyticsWorkspace
-  ]
-}
-
-/* module mySQLServer './modules/mySQLServer.bicep' = {
+module mySQLServer './modules/mySQLServer.bicep' = {
   name: 'mySQLServerDeploy'
   params: {
     administratorLogin: databaseLogin
@@ -192,7 +215,10 @@ module applicationInsights './modules/applicationInsights.bicep' = {
   ]
 } */
 
-/* module frontDoor './modules/frontDoor.bicep' = if (deploymentConfiguration == 'Container app with Azure Front Door Premium') {
+/* // Creating the Front Door profile if required by the deployment configuration
+var frontDoorName = '${applicationNamePrefix}-afd-${uniqueString(resourceGroup().id)}'
+
+module frontDoor './modules/frontDoor.bicep' = if (deploymentConfiguration == 'Container app with Azure Front Door Premium') {
   name: 'FrontDoorDeploy'
   params: {
     frontDoorProfileName: frontDoorName

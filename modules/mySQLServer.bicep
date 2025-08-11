@@ -24,7 +24,7 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' = {
+resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2024-12-01-preview' = {
   name: mySQLServerName
   location: location
   sku: {
@@ -42,7 +42,8 @@ resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' = {
   }
 }
 
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+// Configuring diagnostics settings for MySQL Server
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -69,6 +70,7 @@ resource mySQLServerDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
     ]
   }
 }
+// End of configuring diagnostics settings for MySQL Server
 
 // Configuring private endpoint
 @description('Virtual network for a private endpoint')
@@ -80,16 +82,16 @@ var privateEndpointName = 'ghost-pl-mysql-${uniqueString(resourceGroup().id)}'
 var privateDnsZoneName = 'privatelink.mysql.database.azure.com'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/mysql'
 
-resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2024-07-01' existing = {
   name: vNetName
 }
 
-resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' existing = {
   name: privateEndpointsSubnetName
   parent: existingVNet
 }
 
-resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-07-01' = {
   name: privateEndpointName
   location: location
   properties: {
@@ -110,13 +112,13 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
   }
 }
 
-resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
   name: privateDnsZoneName
   location: 'global'
   properties: {}
 }
 
-resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
   parent: privateDnsZone
   name: '${existingVNet.name}-link'
   location: 'global'
@@ -128,7 +130,7 @@ resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDn
   }
 }
 
-resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = {
+resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-07-01' = {
   name: pvtEndpointDnsGroupName
   properties: {
     privateDnsZoneConfigs: [

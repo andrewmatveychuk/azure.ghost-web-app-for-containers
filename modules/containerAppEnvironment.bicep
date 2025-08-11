@@ -28,10 +28,11 @@ resource existingApplicationInsights 'Microsoft.Insights/components@2020-02-02' 
 // Configuring virtual network integration
 @description('Virtual network for a private endpoint')
 param vNetName string
-@description('Target subnet name to integrate the environment')
-param integrationSubnetName string
 @description('Target subnet prefix to integrate the environment')
 param integrationSubnetPrefix string
+
+var integrationSubnetName = 'cenv-subnet'
+var delegatedServiceName = 'Microsoft.App/environments'
 
 resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
   name: vNetName
@@ -46,7 +47,7 @@ resource integrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01
       {
         name: 'containerAppEnvironmentDelegation'
         properties: {
-          serviceName: 'Microsoft.App/environments'
+          serviceName: delegatedServiceName
         }
       }
     ]

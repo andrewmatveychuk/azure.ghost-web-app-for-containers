@@ -11,7 +11,7 @@ param privateEndpointsSubnetPrefix string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-resource vNet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
+resource vNet 'Microsoft.Network/virtualNetworks@2024-07-01' = {
   name: vNetName
   location: location
   properties: {
