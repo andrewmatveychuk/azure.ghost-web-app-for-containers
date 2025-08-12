@@ -42,6 +42,8 @@ resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2024-12-01-preview' =
   }
 }
 
+output fullyQualifiedDomainName string = mySQLServer.properties.fullyQualifiedDomainName
+
 // Configuring diagnostics settings for MySQL Server
 resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' existing = {
   name: logAnalyticsWorkspaceName

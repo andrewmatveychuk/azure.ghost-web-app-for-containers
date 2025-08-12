@@ -4,6 +4,8 @@ targetScope = 'resourceGroup'
 @maxLength(32)
 param containerAppEnvironmentName string
 
+param containerAppEnvironmentStorageName string
+
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
@@ -16,6 +18,12 @@ param logAnalyticsWorkspaceName string
 
 @description('Application Insights to use by web app')
 param applicationInsightsName string
+
+@description('Storage account name to store Ghost content files')
+param storageAccountName string
+
+@description('File share name on the storage account to store Ghost content files')
+param fileShareName string
 
 resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
@@ -80,5 +88,23 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-prev
         workloadProfileType: 'Consumption'
       }
     ]
+  }
+}
+
+// Configuring storage for the Container App environment
+resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' existing = {
+  name: storageAccountName
+}
+
+resource environmentStorage 'Microsoft.App/managedEnvironments/storages@2025-02-02-preview' = {
+  parent: containerEnvironment
+  name: containerAppEnvironmentStorageName
+  properties: {
+    azureFile: {
+      accessMode: 'ReadWrite'
+      accountName: storageAccountName
+      accountKey: existingStorageAccount.listKeys().keys[0].value
+      shareName: fileShareName
+    }
   }
 }
