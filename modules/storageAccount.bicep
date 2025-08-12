@@ -11,7 +11,7 @@ param storageAccountName string
 ])
 param storageAccountSku string
 
-@description('File share to store Ghost content files')
+@description('File share to store application files')
 param fileShareFolderName string
 
 @description('Location to deploy the resources')
@@ -19,6 +19,9 @@ param location string = resourceGroup().location
 
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
+
+@description('Prefix to use when creating the resources in this deployment.')
+param applicationName string
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   name: storageAccountName
@@ -100,7 +103,7 @@ param vNetName string
 @description('Target subnet to create a private endpoint')
 param privateEndpointsSubnetName string
 @description('File share private endpoint name')
-param privateEndpointName string = 'ghost-pl-file-${uniqueString(resourceGroup().id)}'
+param privateEndpointName string = '${applicationName}-pl-file-${uniqueString(resourceGroup().id)}'
 
 var privateDnsZoneName = 'privatelink.file.${environment().suffixes.storage}'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/file'

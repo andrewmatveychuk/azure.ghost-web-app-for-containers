@@ -26,6 +26,9 @@ param principalName string
 @description('Service principal ID to provide access to Key Vault')
 param principalId string
 
+@description('Prefix to use when creating the resources in this deployment.')
+param applicationName string
+
 resource keyVault 'Microsoft.KeyVault/vaults@2024-12-01-preview' = {
   name: keyVaultName
   location: location
@@ -109,7 +112,7 @@ param vNetName string
 @description('Target subnet to create a private endpoint')
 param privateEndpointsSubnetName string
 
-var privateEndpointName = 'ghost-pl-kv-${uniqueString(resourceGroup().id)}'
+var privateEndpointName = '${applicationName}-pe-kv-${uniqueString(resourceGroup().id)}'
 var privateDnsZoneName = 'privatelink.vaultcore.azure.net'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/keyvault'
 

@@ -24,6 +24,9 @@ param location string = resourceGroup().location
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
+@description('Prefix to use when creating the resources in this deployment.')
+param applicationName string
+
 resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2024-12-01-preview' = {
   name: mySQLServerName
   location: location
@@ -80,7 +83,7 @@ param vNetName string
 @description('Target subnet to create a private endpoint')
 param privateEndpointsSubnetName string
 
-var privateEndpointName = 'ghost-pl-mysql-${uniqueString(resourceGroup().id)}'
+var privateEndpointName = '${applicationName}-pe-mysql-${uniqueString(resourceGroup().id)}'
 var privateDnsZoneName = 'privatelink.mysql.database.azure.com'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/mysql'
 

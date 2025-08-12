@@ -30,6 +30,9 @@ param containerVolumes array
 @description('Collection of secrets used by a Container app')
 param containerSecrets array
 
+@description('Container app health probes')
+param containerProbes array
+
 param managedIdentityId string
 
 resource containerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-preview' existing = {
@@ -42,7 +45,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
-      '${managedIdentityId}' : {}
+      '${managedIdentityId}': {}
     }
   }
   properties: {
@@ -63,6 +66,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
           name: containerAppName
           env: containerEnvVars
           volumeMounts: containerVolumeMounts
+          probes: containerProbes
         }
       ]
       volumes: containerVolumes
