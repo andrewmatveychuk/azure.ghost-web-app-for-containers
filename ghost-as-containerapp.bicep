@@ -13,12 +13,6 @@ param location string = resourceGroup().location
 ])
 param deploymentConfiguration string = 'Container app only (public access)'
 
-/* var siteUrl = (deploymentConfiguration == 'Container app with Azure Front Door Premium')
-? 'https://${frontDoor!.outputs.frontDoorEndpointHostName}'
-: 'https://${containerApp.outputs.hostName}'
-*/
-//Web app with Azure Front Door
-
 // Creating the virtual network and the subnet for private endpoints
 @description('Virtual network address prefix to use')
 param vNetAddressPrefix string = '10.0.0.0/22'
@@ -73,7 +67,7 @@ module applicationInsights 'modules/applicationInsights.bicep' = {
 
 // Creating the Storage account to be used as a persistent storage for the Container App
 @description('Storage account pricing tier')
-param storageAccountSku string = 'Standard_LRS'
+param storageAccountSku string = 'PremiumV2_LRS'
 
 var ghostContentFileShareName = 'content-files'
 
@@ -136,6 +130,11 @@ module keyVault 'modules/keyVault.bicep' = {
 var containerAppEnvironmentName = '${applicationName}-cenv-${uniqueString(resourceGroup().id)}'
 var containerAppEnvironmentStorageName = 'default' // Name of the storage to be used by the Container App Environment
 
+// Configuring the Container App Environment to allow public access or private link access
+var internal = (deploymentConfiguration == 'Container app (private) with Azure Front Door Premium (private link access)')
+  ? true
+  : false
+
 module containerAppEnvironment 'modules/containerAppEnvironment.bicep' = {
   name: 'containerAppEnvironmentDeploy'
   params: {
@@ -145,7 +144,7 @@ module containerAppEnvironment 'modules/containerAppEnvironment.bicep' = {
     containerAppEnvironmentName: containerAppEnvironmentName
     integrationSubnetPrefix: integrationSubnetPrefix
     vNetName: vNetName
-    internal: false
+    internal: internal
     containerAppEnvironmentStorageName: containerAppEnvironmentStorageName
     fileShareName: ghostContentFileShareName
     storageAccountName: storageAccountName
@@ -161,22 +160,23 @@ module containerAppEnvironment 'modules/containerAppEnvironment.bicep' = {
 // Creating the Container App
 
 @description('Ghost container full image name and tag')
-// param ghostContainerName string = 'andrewmatveychuk/ghost-ai:latest'
-param ghostContainerName string = 'azuredocs/containerapps-helloworld:latest'
+param ghostContainerName string = 'andrewmatveychuk/ghost-ai:latest'
+// param ghostContainerName string = 'azuredocs/containerapps-helloworld:latest'
 
 @description('Container registry where the image is hosted')
-// param containerRegistryName string = 'docker.io'
-param containerRegistryName string = 'mcr.microsoft.com'
+param containerRegistryName string = 'docker.io'
+// param containerRegistryName string = 'mcr.microsoft.com'
 
-var containerImageURL = '${containerRegistryName}/${ghostContainerName}'
+// var containerImageURL = '${containerRegistryName}/${ghostContainerName}'
+var containerImageURL = 'ghost:latest'
 
-var ghostContentFilesMountPath = '/var/lib/ghost/content_files'
+var ghostContentFilesMountPath = '/var/lib/ghost/content'
 
 var databaseLogin = applicationName
 var databaseName = applicationName
 
 var containerAppName = '${applicationName}-capp-${uniqueString(resourceGroup().id)}'
-var containerPort = 80 //2368 for Ghost, 80 for azuredocs sample
+var containerPort = 2368 //2368 for Ghost, 80 for azuredocs sample
 var containerProbes = [
   {
     type: 'Liveness'
@@ -208,7 +208,7 @@ var containerProbes = [
 var containerVariables = [
   {
     name: 'NODE_ENV'
-    value: 'development'
+    value: 'production'
   }
   {
     name: 'GHOST_CONTENT'
@@ -335,7 +335,7 @@ module containerApp 'modules/containerApp.bicep' = {
       {
         name: ghostContentFileShareName
         storageName: containerAppEnvironmentStorageName
-        storageType: 'AzureFile'
+        storageType: 'nfsAzureFile'
       }
     ]
     containerVolumeMounts: [
@@ -390,22 +390,28 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
   ]
 }
 
-/* // Creating the Front Door profile if required by the deployment configuration
-var frontDoorName = '${applicationNamePrefix}-afd-${uniqueString(resourceGroup().id)}'
+// Creating the Front Door profile if required by the deployment configuration
+var frontDoorName = '${applicationName}-afd-${uniqueString(resourceGroup().id)}'
 
-module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Container app with Azure Front Door Premium') {
+module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Container app (private) with Azure Front Door Premium (private link access)') {
   name: 'FrontDoorDeploy'
   params: {
     frontDoorProfileName: frontDoorName
-    applicationName: applicationNamePrefix
-    webAppName: containerAppName
+    applicationName: applicationName
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+    containerAppEnvironmentName: containerAppEnvironmentName
+    frontDoorOriginHostName: containerApp.outputs.hostName
+    privateEndpointsSubnetName: privateEndpointsSubnetName
+    vNetName: vNetName
   }
   dependsOn: [
+    vNet
+    containerAppEnvironment
     logAnalyticsWorkspace
   ]
-} */
+}
 
-output testValue string = 'some text here'
-output applicationHostName string = containerApp.outputs.hostName
-// output endpointHostName string = siteUrl
+// output applicationHostName string = containerApp.outputs.hostName
+output endpointHostName string = (deploymentConfiguration == 'Container app (private) with Azure Front Door Premium (private link access)')
+  ? frontDoor!.outputs.frontDoorEndpointHostName
+  : containerApp.outputs.hostName

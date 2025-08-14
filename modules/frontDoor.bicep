@@ -19,7 +19,7 @@ param logAnalyticsWorkspaceName string
 param containerAppEnvironmentName string
 
 var managedLoadBalancerName = 'capp-svc-lb' // This is hardcoded as a managed resource by Microsoft
-// Sample managed resource group name for COntainer App Environment: ME_ghost-cenv-227pxybnua5y2_ghost-5-rg_westeurope
+// Sample managed resource group name for Container App Environment: ME_ghost-cenv-227pxybnua5y2_ghost-5-rg_westeurope
 var managedLoadBalancerResourceGroupName = 'ME_${containerAppEnvironmentName}_${resourceGroup().name}_${location}'
 
 output appEnvironmentResourceGroupName string = managedLoadBalancerResourceGroupName

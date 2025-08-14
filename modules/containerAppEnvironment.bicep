@@ -100,11 +100,16 @@ resource environmentStorage 'Microsoft.App/managedEnvironments/storages@2025-02-
   parent: containerEnvironment
   name: containerAppEnvironmentStorageName
   properties: {
-    azureFile: {
+    /* azureFile: {
       accessMode: 'ReadWrite'
       accountName: storageAccountName
       accountKey: existingStorageAccount.listKeys().keys[0].value
       shareName: fileShareName
+    } */
+    nfsAzureFile: {
+      accessMode: 'ReadWrite'
+      shareName: '/${existingStorageAccount.name}/${fileShareName}'
+      server: parseUri(existingStorageAccount.properties.primaryEndpoints.file).host
     }
   }
 }

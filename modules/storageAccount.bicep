@@ -5,14 +5,13 @@ targetScope = 'resourceGroup'
 param storageAccountName string
 
 @allowed([
-  'Standard_LRS'
-  'Standard_GRS'
-  'Standard_ZRS'
+  'PremiumV2_LRS'
+  'PremiumV2_ZRS'
 ])
-param storageAccountSku string
+param storageAccountSku string = 'PremiumV2_LRS'
 
 @description('File share to store application files')
-param fileShareFolderName string
+param fileShareFolderName string = 'content-files'
 
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
@@ -26,12 +25,12 @@ param applicationName string
 resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   name: storageAccountName
   location: location
-  kind: 'StorageV2'
+  kind: 'FileStorage'
   sku: {
     name: storageAccountSku
   }
   properties: {
-    supportsHttpsTrafficOnly: true
+    supportsHttpsTrafficOnly: false // https://learn.microsoft.com/en-us/azure/container-apps/storage-mounts?tabs=nfs&pivots=azure-cli#azure-files
     minimumTlsVersion: 'TLS1_2'
     publicNetworkAccess: 'Disabled'
   }
@@ -94,6 +93,10 @@ resource fileServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-
 resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2025-01-01' = {
   parent: fileServices
   name: fileShareFolderName
+  properties: {
+    shareQuota: 32 // Quota in GB
+    enabledProtocols: 'NFS'
+  }
 }
 // End of configuring file services and file share
 
