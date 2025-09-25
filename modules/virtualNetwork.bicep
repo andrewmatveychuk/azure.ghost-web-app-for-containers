@@ -25,6 +25,7 @@ resource vNet 'Microsoft.Network/virtualNetworks@2024-07-01' = {
         name: privateEndpointsSubnetName
         properties: {
           addressPrefix: privateEndpointsSubnetPrefix
+          privateLinkServiceNetworkPolicies: 'Disabled' // https://learn.microsoft.com/en-us/azure/private-link/disable-private-link-service-network-policy
         }
       }
     ]

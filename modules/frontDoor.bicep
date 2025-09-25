@@ -5,84 +5,41 @@ targetScope = 'resourceGroup'
 @maxLength(64)
 param frontDoorProfileName string
 
-@description('Location to deploy the resources')
-param location string = resourceGroup().location
-
 @description('Application name')
 param applicationName string
 
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-// Configuring private link service for Front Door
 @description('Container App Environment to configure Private Link service for')
 param containerAppEnvironmentName string
 
-var managedLoadBalancerName = 'capp-svc-lb' // This is hardcoded as a managed resource by Microsoft
-// Sample managed resource group name for Container App Environment: ME_ghost-cenv-227pxybnua5y2_ghost-5-rg_westeurope
-var managedLoadBalancerResourceGroupName = 'ME_${containerAppEnvironmentName}_${resourceGroup().name}_${location}'
+@description('Resource type for the shared private link resource')
+param sharedPrivateLinkResourceGroupId string = 'managedEnvironments' // This actually refers to the resource type, not the resource group
 
-output appEnvironmentResourceGroupName string = managedLoadBalancerResourceGroupName
+@allowed([
+  'Detection'
+  'Prevention'
+])
+@description('The mode that the WAF should be deployed using. In \'Prevention\' mode, the WAF will block requests it detects as malicious. In \'Detection\' mode, the WAF will not block requests and will simply log the request.')
+param wafMode string = 'Prevention'
 
-resource existingLoadBalancer 'Microsoft.Network/loadBalancers@2024-07-01' existing = {
-  name: managedLoadBalancerName
-  scope: resourceGroup(managedLoadBalancerResourceGroupName)
-}
-
-var existingLoadBalancerFrontendIPConfigResourceId = '${existingLoadBalancer.id}/frontendIPConfigurations/${existingLoadBalancer.name}fe' // The configuration name is hardcoded as a managed resource by Microsoft
-
-@description('Virtual network for a private endpoint')
-param vNetName string
-@description('Target subnet to create a private endpoint')
-param privateEndpointsSubnetName string
-
-
-resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
-  name: vNetName
-}
-
-resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
-  name: privateEndpointsSubnetName
-  parent: existingVNet
-}
-
-var privateLinkServiceName = '${applicationName}-pls-${uniqueString(resourceGroup().id)}'
-
-resource privateLinkService 'Microsoft.Network/privateLinkServices@2024-07-01' = {
-  name: privateLinkServiceName
-  location: location
-  properties: {
-    autoApproval: {
-      subscriptions: [
-        subscription().subscriptionId
-      ]
-    }
-    visibility: {
-      subscriptions: [
-        subscription().subscriptionId
-      ]
-    }
-    fqdns: []
-    enableProxyProtocol: false
-    loadBalancerFrontendIpConfigurations: [
-      {
-        id: existingLoadBalancerFrontendIPConfigResourceId
-      }
-    ]
-    ipConfigurations: [
-      {
-        name: 'ipconfig-0'
-        properties: {
-          privateIPAllocationMethod: 'Dynamic'
-          subnet: {
-            id: existingSubnet.id
-          }
-          primary: true
-          privateIPAddressVersion: 'IPv4'
-        }
-      }
-    ]
+@description('The list of managed rule sets to configure on the WAF.')
+param wafManagedRuleSets array = [
+  {
+    ruleSetType: 'Microsoft_DefaultRuleSet'
+    ruleSetVersion: '2.1'
+    ruleSetAction: 'Block'
   }
+  {
+    ruleSetType: 'Microsoft_BotManagerRuleSet'
+    ruleSetVersion: '1.1'
+  }
+]
+
+
+resource existingContainerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-preview' existing = {
+  name: containerAppEnvironmentName
 }
 
 // Configuring Front Door profile and endpoint
@@ -96,7 +53,6 @@ var frontDoorRouteName = '${applicationName}-Route'
 @description('Name of Azure Front Door pricing tier.')
 param frontDoorSku string = 'Premium_AzureFrontDoor'
 
-//++
 resource frontDoorProfile 'Microsoft.Cdn/profiles@2025-06-01' = {
   name: frontDoorProfileName
   location: 'global'
@@ -105,7 +61,6 @@ resource frontDoorProfile 'Microsoft.Cdn/profiles@2025-06-01' = {
   }
 }
 
-//++
 resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2025-06-01' = {
   name: frontDoorEndpointName
   parent: frontDoorProfile
@@ -145,16 +100,17 @@ resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01
     weight: 1000
     sharedPrivateLinkResource: {
       privateLink: {
-        id: privateLinkService.id
+        id: existingContainerEnvironment.id
       }
-      privateLinkLocation: privateLinkService.location
-      status: 'Approved'
+      privateLinkLocation: existingContainerEnvironment.location
+      groupId: sharedPrivateLinkResourceGroupId
+      status: 'Approved' // This private link connection still requires manual approval from the target resource, as it is not in the same tenant/subscription and cannot be auto-approved
       requestMessage: 'Please approve this request to allow Front Door to access the container app'
     }
     enforceCertificateNameCheck: true
   }
 }
-//++
+
 resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = {
   name: frontDoorRouteName
   parent: frontDoorEndpoint
@@ -259,25 +215,48 @@ resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-
   }
 }
 
-// resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = {
-//   parent: existingWebApp
-//   name: 'web'
-//   properties: {
-//     ipSecurityRestrictions: [
-//       {
-//         ipAddress: 'AzureFrontDoor.Backend'
-//         action: 'Allow'
-//         tag: 'ServiceTag'
-//         priority: 100
-//         name: 'Allow traffic from Front Door'
-//         headers: {
-//           'x-azure-fdid': [
-//             frontDoorProfile.properties.frontDoorId //Scoping access to a unique Front Door instance
-//           ]
-//         }
-//       }
-//     ]
-//   }
-// }
+// Configuring WAF and security policy association
+resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2025-03-01' = {
+  name: applicationName
+  location: 'global'
+  sku: {
+    name: 'Premium_AzureFrontDoor'
+  }
+  properties: {
+    policySettings: {
+      mode: wafMode
+      requestBodyCheck: 'Enabled'
+      enabledState: 'Enabled'
+    }
+    managedRules: {
+      managedRuleSets: wafManagedRuleSets
+    }
+  }
+}
+
+resource securityPolicy 'Microsoft.Cdn/profiles/securityPolicies@2025-06-01' =  {
+  name: applicationName
+  parent: frontDoorProfile
+  properties: {
+    parameters: {
+      type: 'WebApplicationFirewall'
+      wafPolicy: {
+        id: wafPolicy.id
+      }
+      associations: [
+        {
+          domains: [
+            {
+              id: frontDoorEndpoint.id
+            }
+          ]
+          patternsToMatch: [
+            '/*'
+          ]
+        }
+      ]
+    }
+  }
+}
 
 output frontDoorEndpointHostName string = frontDoorEndpoint.properties.hostName

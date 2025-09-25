@@ -34,23 +34,24 @@ resource existingApplicationInsights 'Microsoft.Insights/components@2020-02-02' 
 }
 
 // Configuring virtual network integration
-@description('Virtual network for a private endpoint')
+@description('Virtual network to use for the Container App Environment')
 param vNetName string
-@description('Target subnet prefix to integrate the environment')
-param integrationSubnetPrefix string
+@description('Subnet name for the Container App Environment')
+param subnetName string = 'cenv-subnet'
+@description('Subnet prefix for the Container App Environment')
+param subnetPrefix string
 
-var integrationSubnetName = 'cenv-subnet'
 var delegatedServiceName = 'Microsoft.App/environments'
 
 resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
   name: vNetName
 }
 
-resource integrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' = {
-  name: integrationSubnetName
+resource containerEnvironmentSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' = {
+  name: subnetName
   parent: existingVNet
   properties: {
-    addressPrefix: integrationSubnetPrefix
+    addressPrefix: subnetPrefix
     delegations: [
       {
         name: 'containerAppEnvironmentDelegation'
@@ -78,7 +79,7 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-prev
     }
     vnetConfiguration: {
       internal: internal
-      infrastructureSubnetId: integrationSubnet.id
+      infrastructureSubnetId: containerEnvironmentSubnet.id
     }
     zoneRedundant: true
     // https://learn.microsoft.com/en-us/azure/container-apps/environment-type-consumption-only

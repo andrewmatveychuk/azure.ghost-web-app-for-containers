@@ -18,8 +18,8 @@ param deploymentConfiguration string = 'Container app only (public access)'
 param vNetAddressPrefix string = '10.0.0.0/22'
 @description('Address prefix for private links subnet')
 param privateEndpointsSubnetPrefix string = '10.0.3.240/28'
-@description('Address prefix for integration subnet')
-param integrationSubnetPrefix string = '10.0.0.0/27' // Minimal subnet size for Container App Environment with workload profiles
+@description('Address prefix for container environment subnet')
+param containerEnvironmentSubnetPrefix string = '10.0.0.0/27' // Minimal subnet size for Container App Environment with workload profiles
 
 var vNetName = '${applicationName}-vnet-${uniqueString(resourceGroup().id)}'
 var privateEndpointsSubnetName = 'pe-subnet'
@@ -142,8 +142,9 @@ module containerAppEnvironment 'modules/containerAppEnvironment.bicep' = {
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     applicationInsightsName: applicationInsightsName
     containerAppEnvironmentName: containerAppEnvironmentName
-    integrationSubnetPrefix: integrationSubnetPrefix
     vNetName: vNetName
+    subnetName: 'cenv-subnet'
+    subnetPrefix: containerEnvironmentSubnetPrefix
     internal: internal
     containerAppEnvironmentStorageName: containerAppEnvironmentStorageName
     fileShareName: ghostContentFileShareName
@@ -401,8 +402,6 @@ module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Con
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     containerAppEnvironmentName: containerAppEnvironmentName
     frontDoorOriginHostName: containerApp.outputs.hostName
-    privateEndpointsSubnetName: privateEndpointsSubnetName
-    vNetName: vNetName
   }
   dependsOn: [
     vNet
