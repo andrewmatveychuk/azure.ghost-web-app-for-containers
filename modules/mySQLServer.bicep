@@ -10,6 +10,8 @@ param mySQLServerName string
 ])
 param mySQLServerSku string
 
+param mySQLServerVersion string = '8.0.21'
+
 @description('Database administrator login name')
 @minLength(1)
 param administratorLogin string
@@ -36,7 +38,7 @@ resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2024-12-01-preview' =
   }
   properties: {
     createMode: 'Default'
-    version: '8.0.21'
+    version: mySQLServerVersion
     administratorLogin: administratorLogin
     administratorLoginPassword: administratorPassword
     network: {
