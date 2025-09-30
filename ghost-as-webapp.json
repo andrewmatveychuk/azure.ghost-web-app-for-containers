@@ -1,0 +1,2031 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "17721449061908079179"
+    }
+  },
+  "parameters": {
+    "applicationName": {
+      "type": "string",
+      "defaultValue": "ghost",
+      "metadata": {
+        "description": "Prefix to use when creating the resources in this deployment."
+      }
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "defaultValue": "B1",
+      "metadata": {
+        "description": "App Service Plan pricing tier"
+      }
+    },
+    "logAnalyticsWorkspaceSku": {
+      "type": "string",
+      "defaultValue": "PerGB2018",
+      "metadata": {
+        "description": "Log Analytics workspace pricing tier"
+      }
+    },
+    "storageAccountSku": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_ZRS"
+      ],
+      "metadata": {
+        "description": "Storage account pricing tier"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location to deploy the resources"
+      }
+    },
+    "mySQLServerSku": {
+      "type": "string",
+      "defaultValue": "Standard_B1ms",
+      "metadata": {
+        "description": "MySQL server SKU"
+      }
+    },
+    "databasePassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "MySQL server password"
+      }
+    },
+    "ghostContainerName": {
+      "type": "string",
+      "defaultValue": "andrewmatveychuk/ghost-ai:latest",
+      "metadata": {
+        "description": "Ghost container full image name and tag"
+      }
+    },
+    "containerRegistryUrl": {
+      "type": "string",
+      "defaultValue": "https://index.docker.io/v1",
+      "metadata": {
+        "description": "Container registry where the image is hosted"
+      }
+    },
+    "deploymentConfiguration": {
+      "type": "string",
+      "defaultValue": "Web app with public access",
+      "allowedValues": [
+        "Web app with public access",
+        "Web app with Azure Front Door"
+      ]
+    },
+    "vNetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/26",
+      "metadata": {
+        "description": "Virtual network address prefix to use"
+      }
+    },
+    "webAppIntegrationSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/28",
+      "metadata": {
+        "description": "Address prefix for web app integration subnet"
+      }
+    },
+    "privateEndpointsSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.16/28",
+      "metadata": {
+        "description": "Address prefix for private links subnet"
+      }
+    }
+  },
+  "variables": {
+    "vNetName": "[format('{0}-vnet-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "privateEndpointsSubnetName": "pe-subnet",
+    "webAppIntegrationSubnetName": "asp-integration-subnet",
+    "webAppName": "[format('{0}-web-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "appServicePlanName": "[format('{0}-asp-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "logAnalyticsWorkspaceName": "[format('{0}-la-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "applicationInsightsName": "[format('{0}-ai-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "keyVaultName": "[format('{0}-kv-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "storageAccountName": "[format('{0}stor{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "mySQLServerName": "[format('{0}-mysql-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "databaseLogin": "ghost",
+    "databaseName": "ghost",
+    "ghostContentFileShareName": "contentfiles",
+    "ghostContentFilesMountPath": "/var/lib/ghost/content_files",
+    "frontDoorName": "[format('{0}-afd-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vNetDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "vNetAddressPrefix": {
+            "value": "[parameters('vNetAddressPrefix')]"
+          },
+          "privateEndpointsSubnetName": {
+            "value": "[variables('privateEndpointsSubnetName')]"
+          },
+          "privateEndpointsSubnetPrefix": {
+            "value": "[parameters('privateEndpointsSubnetPrefix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "14389946328870371630"
+            }
+          },
+          "parameters": {
+            "vNetName": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 64
+            },
+            "vNetAddressPrefix": {
+              "type": "string"
+            },
+            "privateEndpointsSubnetName": {
+              "type": "string"
+            },
+            "privateEndpointsSubnetPrefix": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location to deploy the resources"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-07-01",
+              "name": "[parameters('vNetName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('vNetAddressPrefix')]"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "[parameters('privateEndpointsSubnetName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('privateEndpointsSubnetPrefix')]",
+                      "privateLinkServiceNetworkPolicies": "Disabled"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "logAnalyticsWorkspaceDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
+          },
+          "logAnalyticsWorkspaceSku": {
+            "value": "[parameters('logAnalyticsWorkspaceSku')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "15338368156198984868"
+            }
+          },
+          "parameters": {
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "minLength": 4,
+              "maxLength": 63,
+              "metadata": {
+                "description": "Log Analytics workspace name"
+              }
+            },
+            "logAnalyticsWorkspaceSku": {
+              "type": "string",
+              "allowedValues": [
+                "PerGB2018"
+              ],
+              "metadata": {
+                "description": "Log Analytics workspace pricing tier"
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location to deploy the resources"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2025-02-01",
+              "name": "[parameters('logAnalyticsWorkspaceName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "[parameters('logAnalyticsWorkspaceSku')]"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "storageAccountDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "storageAccountName": {
+            "value": "[variables('storageAccountName')]"
+          },
+          "storageAccountSku": {
+            "value": "[parameters('storageAccountSku')]"
+          },
+          "storageAccountKind": {
+            "value": "StorageV2"
+          },
+          "storageAccountHttpsTrafficOnly": {
+            "value": true
+          },
+          "fileShareFolderName": {
+            "value": "[variables('ghostContentFileShareName')]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "privateEndpointsSubnetName": {
+            "value": "[variables('privateEndpointsSubnetName')]"
+          },
+          "applicationName": {
+            "value": "[parameters('applicationName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "11995357983181777453"
+            }
+          },
+          "parameters": {
+            "storageAccountName": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 24,
+              "metadata": {
+                "description": "Name of the storage account to create. Must be between 3 and 24 characters in length and may contain numbers and lowercase letters only."
+              }
+            },
+            "storageAccountSku": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account SKU"
+              }
+            },
+            "storageAccountKind": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account kind"
+              }
+            },
+            "storageAccountHttpsTrafficOnly": {
+              "type": "bool",
+              "metadata": {
+                "description": "Indicates whether https traffic only should be enabled. Default is true."
+              }
+            },
+            "fileShareFolderName": {
+              "type": "string",
+              "defaultValue": "content-files",
+              "metadata": {
+                "description": "File share to store application files"
+              }
+            },
+            "fileShareProperties": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Additional properties for the file share, e.g., shareQuota. See https://learn.microsoft.com/en-us/azure/templates/microsoft.storage/storageaccounts/fileservices/shares for details."
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location to deploy the resources"
+              }
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace to use for diagnostics settings"
+              }
+            },
+            "applicationName": {
+              "type": "string",
+              "metadata": {
+                "description": "Prefix to use when creating the resources in this deployment."
+              }
+            },
+            "vNetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network for a private endpoint"
+              }
+            },
+            "privateEndpointsSubnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Target subnet to create a private endpoint"
+              }
+            },
+            "privateEndpointName": {
+              "type": "string",
+              "defaultValue": "[format('{0}-pl-file-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+              "metadata": {
+                "description": "File share private endpoint name"
+              }
+            }
+          },
+          "variables": {
+            "privateDnsZoneName": "[format('privatelink.file.{0}', environment().suffixes.storage)]",
+            "pvtEndpointDnsGroupName": "[format('{0}/file', parameters('privateEndpointName'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2025-01-01",
+              "name": "[parameters('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "kind": "[parameters('storageAccountKind')]",
+              "sku": {
+                "name": "[parameters('storageAccountSku')]"
+              },
+              "properties": {
+                "supportsHttpsTrafficOnly": "[parameters('storageAccountHttpsTrafficOnly')]",
+                "minimumTlsVersion": "TLS1_2",
+                "publicNetworkAccess": "Disabled"
+              }
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+              "name": "StorageAccountDiagnostics",
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+                "metrics": [
+                  {
+                    "category": "Transaction",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices",
+              "apiVersion": "2025-01-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}/fileServices/{1}', parameters('storageAccountName'), 'default')]",
+              "name": "FileServicesDiagnostics",
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+                "metrics": [
+                  {
+                    "category": "Transaction",
+                    "enabled": true
+                  }
+                ],
+                "logs": [
+                  {
+                    "category": "StorageRead",
+                    "enabled": true
+                  },
+                  {
+                    "category": "StorageWrite",
+                    "enabled": true
+                  },
+                  {
+                    "category": "StorageDelete",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+              "apiVersion": "2025-01-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', parameters('fileShareFolderName'))]",
+              "properties": "[parameters('fileShareProperties')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[variables('privateDnsZoneName')]",
+              "location": "global",
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', parameters('vNetName')))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vNetName'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('privateEndpointName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('privateEndpointsSubnetName'))]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[parameters('privateEndpointName')]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+                      "groupIds": [
+                        "file"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('pvtEndpointDnsGroupName')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]",
+                "[resourceId('Microsoft.Network/privateEndpoints', parameters('privateEndpointName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "fileShareFullName": {
+              "type": "string",
+              "value": "[parameters('fileShareFolderName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "keyVaultDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "keyVaultName": {
+            "value": "[variables('keyVaultName')]"
+          },
+          "keyVaultSecretName": {
+            "value": "databasePassword"
+          },
+          "keyVaultSecretValue": {
+            "value": "[parameters('databasePassword')]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "privateEndpointsSubnetName": {
+            "value": "[variables('privateEndpointsSubnetName')]"
+          },
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.principalId.value]"
+          },
+          "principalName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.principalName.value]"
+          },
+          "applicationName": {
+            "value": "[variables('webAppName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "10512531244869550853"
+            }
+          },
+          "parameters": {
+            "keyVaultName": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 24,
+              "metadata": {
+                "description": "Key Vault name"
+              }
+            },
+            "keyVaultSecretName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 127,
+              "metadata": {
+                "description": "Secret name to store"
+              }
+            },
+            "keyVaultSecretValue": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Secret value to store"
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location to deploy the resources"
+              }
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace to use for diagnostics settings"
+              }
+            },
+            "principalName": {
+              "type": "string",
+              "metadata": {
+                "description": "Service principal name to provide access to Key Vault"
+              }
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Service principal ID to provide access to Key Vault"
+              }
+            },
+            "applicationName": {
+              "type": "string",
+              "metadata": {
+                "description": "Prefix to use when creating the resources in this deployment."
+              }
+            },
+            "vNetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network for a private endpoint"
+              }
+            },
+            "privateEndpointsSubnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Target subnet to create a private endpoint"
+              }
+            }
+          },
+          "variables": {
+            "roleIdMapping": {
+              "Key Vault Administrator": "00482a5a-887f-4fb3-b363-3b7fe8e74483",
+              "Key Vault Certificates Officer": "a4417e6f-fecd-4de8-b567-7b0420556985",
+              "Key Vault Crypto Officer": "14b46e9e-c2b7-41b4-b07b-48a6ebf60603",
+              "Key Vault Crypto Service Encryption User": "e147488a-f6f5-4113-8e2d-b22465e65bf6",
+              "Key Vault Crypto User": "12338af0-0e69-4776-bea7-57ae8d297424",
+              "Key Vault Reader": "21090545-7ca7-4776-b22c-e363652d74d2",
+              "Key Vault Secrets Officer": "b86a8fe4-44ce-4948-aee5-eccb2c155cd7",
+              "Key Vault Secrets User": "4633458b-17de-408a-b874-0445c86b69e6"
+            },
+            "privateEndpointName": "[format('{0}-pe-kv-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+            "privateDnsZoneName": "privatelink.vaultcore.azure.net",
+            "pvtEndpointDnsGroupName": "[format('{0}/keyvault', variables('privateEndpointName'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2024-12-01-preview",
+              "name": "[parameters('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                  "name": "standard",
+                  "family": "A"
+                },
+                "publicNetworkAccess": "Disabled",
+                "networkAcls": {
+                  "bypass": "None"
+                },
+                "enableRbacAuthorization": true
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+              "name": "[guid(variables('roleIdMapping')['Key Vault Secrets User'], parameters('principalName'), parameters('keyVaultName'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleIdMapping')['Key Vault Secrets User'])]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2024-12-01-preview",
+              "name": "[format('{0}/{1}', parameters('keyVaultName'), parameters('keyVaultSecretName'))]",
+              "properties": {
+                "value": "[parameters('keyVaultSecretValue')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+              "name": "KeyVaultDiagnostics",
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ],
+                "logs": [
+                  {
+                    "category": "AuditEvent",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AzurePolicyEvaluationDetails",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "[variables('privateDnsZoneName')]",
+              "location": "global",
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2024-06-01",
+              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', parameters('vNetName')))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vNetName'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-07-01",
+              "name": "[variables('privateEndpointName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('privateEndpointsSubnetName'))]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[variables('privateEndpointName')]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+                      "groupIds": [
+                        "vault"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-07-01",
+              "name": "[variables('pvtEndpointDnsGroupName')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]",
+                "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "secretUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), parameters('keyVaultSecretName')), '2024-12-01-preview').secretUri]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "webAppDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "webAppName": {
+            "value": "[variables('webAppName')]"
+          },
+          "appServicePlanName": {
+            "value": "[variables('appServicePlanName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
+          },
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "integrationSubnetName": {
+            "value": "[variables('webAppIntegrationSubnetName')]"
+          },
+          "integrationSubnetPrefix": {
+            "value": "[parameters('webAppIntegrationSubnetPrefix')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "161171159291713123"
+            }
+          },
+          "parameters": {
+            "webAppName": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location to deploy the resources"
+              }
+            },
+            "appServicePlanName": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service Plan to host the app"
+              }
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace to use for diagnostics settings"
+              }
+            },
+            "vNetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network to use for web app integration"
+              }
+            },
+            "integrationSubnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet name for web app integration"
+              }
+            },
+            "integrationSubnetPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet prefix for web app integration"
+              }
+            }
+          },
+          "variables": {
+            "delegatedServiceName": "Microsoft.Web/serverFarms"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2024-11-01",
+              "name": "[parameters('webAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "app,linux,container",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "clientAffinityEnabled": false,
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+                "httpsOnly": true,
+                "enabled": true,
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2024-07-01",
+              "name": "[format('{0}/{1}', parameters('vNetName'), parameters('integrationSubnetName'))]",
+              "properties": {
+                "addressPrefix": "[parameters('integrationSubnetPrefix')]",
+                "delegations": [
+                  {
+                    "name": "webAppDelegation",
+                    "properties": {
+                      "serviceName": "[variables('delegatedServiceName')]"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites/networkConfig",
+              "apiVersion": "2024-11-01",
+              "name": "[format('{0}/{1}', parameters('webAppName'), 'virtualNetwork')]",
+              "properties": {
+                "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('integrationSubnetName'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('integrationSubnetName'))]",
+                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Web/sites/{0}', parameters('webAppName'))]",
+              "name": "WebAppDiagnostics",
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ],
+                "logs": [
+                  {
+                    "category": "AppServiceHTTPLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceConsoleLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceAppLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceAuditLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceIPSecAuditLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServicePlatformLogs",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "hostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2024-11-01').hostNames[0]]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2024-11-01', 'full').identity.principalId]"
+            },
+            "principalName": {
+              "type": "string",
+              "value": "[parameters('webAppName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'appServicePlanDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "webAppSettingsDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "webAppName": {
+            "value": "[variables('webAppName')]"
+          },
+          "containerRegistryUrl": {
+            "value": "[parameters('containerRegistryUrl')]"
+          },
+          "ghostContainerImage": {
+            "value": "[parameters('ghostContainerName')]"
+          },
+          "containerMountPath": {
+            "value": "[variables('ghostContentFilesMountPath')]"
+          },
+          "mySQLServerName": {
+            "value": "[variables('mySQLServerName')]"
+          },
+          "databaseName": {
+            "value": "[variables('databaseName')]"
+          },
+          "databaseLogin": {
+            "value": "[variables('databaseLogin')]"
+          },
+          "databasePasswordSecretUri": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVaultDeploy'), '2022-09-01').outputs.secretUri.value]"
+          },
+          "siteUrl": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), createObject('value', format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value)), createObject('value', format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value)))]",
+          "applicationInsightsName": {
+            "value": "[variables('applicationInsightsName')]"
+          },
+          "fileShareName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy'), '2022-09-01').outputs.fileShareFullName.value]"
+          },
+          "storageAccountName": {
+            "value": "[variables('storageAccountName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "16262852731161086528"
+            }
+          },
+          "parameters": {
+            "webAppName": {
+              "type": "string",
+              "metadata": {
+                "description": "Web app to configure settings"
+              }
+            },
+            "applicationInsightsName": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights to use by web app"
+              }
+            },
+            "mySQLServerName": {
+              "type": "string",
+              "metadata": {
+                "description": "MySQL server name"
+              }
+            },
+            "databaseName": {
+              "type": "string",
+              "metadata": {
+                "description": "Ghost database name"
+              }
+            },
+            "databaseLogin": {
+              "type": "string",
+              "metadata": {
+                "description": "Ghost database user name"
+              }
+            },
+            "databasePasswordSecretUri": {
+              "type": "string",
+              "metadata": {
+                "description": "Ghost database user password"
+              }
+            },
+            "siteUrl": {
+              "type": "string",
+              "metadata": {
+                "description": "Website URL to autogenerate links by Ghost"
+              }
+            },
+            "containerRegistryUrl": {
+              "type": "string",
+              "metadata": {
+                "description": "Container registry to pull Ghost docker image"
+              }
+            },
+            "ghostContainerImage": {
+              "type": "string",
+              "metadata": {
+                "description": "Ghost container full image name and tag"
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name to store Ghost content files"
+              }
+            },
+            "fileShareName": {
+              "type": "string",
+              "metadata": {
+                "description": "File share name on the storage account to store Ghost content files"
+              }
+            },
+            "containerMountPath": {
+              "type": "string",
+              "metadata": {
+                "description": "Path to mount the file share in the container"
+              }
+            }
+          },
+          "variables": {
+            "containerImageReference": "[format('DOCKER|{0}', parameters('ghostContainerImage'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', parameters('webAppName'), 'web')]",
+              "properties": {
+                "http20Enabled": true,
+                "httpLoggingEnabled": true,
+                "minTlsVersion": "1.3",
+                "ftpsState": "Disabled",
+                "linuxFxVersion": "[variables('containerImageReference')]",
+                "alwaysOn": true,
+                "use32BitWorkerProcess": false,
+                "azureStorageAccounts": {
+                  "ContentFilesVolume": {
+                    "type": "AzureFiles",
+                    "accountName": "[parameters('storageAccountName')]",
+                    "shareName": "[parameters('fileShareName')]",
+                    "mountPath": "[parameters('containerMountPath')]",
+                    "accessKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').keys[0].value]"
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', parameters('webAppName'), 'appsettings')]",
+              "properties": {
+                "APPLICATIONINSIGHTS_CONNECTION_STRING": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString]",
+                "ApplicationInsightsAgent_EXTENSION_VERSION": "~2",
+                "XDT_MicrosoftApplicationInsights_Mode": "default",
+                "WEBSITES_ENABLE_APP_SERVICE_STORAGE": "false",
+                "DOCKER_REGISTRY_SERVER_URL": "[parameters('containerRegistryUrl')]",
+                "NODE_ENV": "production",
+                "GHOST_CONTENT": "[parameters('containerMountPath')]",
+                "paths__contentPath": "[parameters('containerMountPath')]",
+                "privacy_useUpdateCheck": "false",
+                "url": "[parameters('siteUrl')]",
+                "database__client": "mysql",
+                "database__connection__host": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2023-12-30').fullyQualifiedDomainName]",
+                "database__connection__user": "[parameters('databaseLogin')]",
+                "database__connection__password": "[format('@Microsoft.KeyVault(SecretUri={0})', parameters('databasePasswordSecretUri'))]",
+                "database__connection__database": "[parameters('databaseName')]",
+                "database__connection__ssl__ca": "-----BEGIN CERTIFICATE-----\r\nMIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\r\nMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\nd3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD\r\nQTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT\r\nMRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\r\nb20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG\r\n9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB\r\nCSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97\r\nnh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt\r\n43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P\r\nT19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4\r\ngdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO\r\nBgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR\r\nTLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw\r\nDQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr\r\nhMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg\r\n06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF\r\nPnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls\r\nYSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk\r\nCAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=\r\n-----END CERTIFICATE-----\r\n-----BEGIN CERTIFICATE-----\r\nMIIDjjCCAnagAwIBAgIQAzrx5qcRqaC7KGSxHQn65TANBgkqhkiG9w0BAQsFADBh\r\nMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\nd3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBH\r\nMjAeFw0xMzA4MDExMjAwMDBaFw0zODAxMTUxMjAwMDBaMGExCzAJBgNVBAYTAlVT\r\nMRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\r\nb20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IEcyMIIBIjANBgkqhkiG\r\n9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuzfNNNx7a8myaJCtSnX/RrohCgiN9RlUyfuI\r\n2/Ou8jqJkTx65qsGGmvPrC3oXgkkRLpimn7Wo6h+4FR1IAWsULecYxpsMNzaHxmx\r\n1x7e/dfgy5SDN67sH0NO3Xss0r0upS/kqbitOtSZpLYl6ZtrAGCSYP9PIUkY92eQ\r\nq2EGnI/yuum06ZIya7XzV+hdG82MHauVBJVJ8zUtluNJbd134/tJS7SsVQepj5Wz\r\ntCO7TG1F8PapspUwtP1MVYwnSlcUfIKdzXOS0xZKBgyMUNGPHgm+F6HmIcr9g+UQ\r\nvIOlCsRnKPZzFBQ9RnbDhxSJITRNrw9FDKZJobq7nMWxM4MphQIDAQABo0IwQDAP\r\nBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQUTiJUIBiV\r\n5uNu5g/6+rkS7QYXjzkwDQYJKoZIhvcNAQELBQADggEBAGBnKJRvDkhj6zHd6mcY\r\n1Yl9PMWLSn/pvtsrF9+wX3N3KjITOYFnQoQj8kVnNeyIv/iPsGEMNKSuIEyExtv4\r\nNeF22d+mQrvHRAiGfzZ0JFrabA0UWTW98kndth/Jsw1HKj2ZL7tcu7XUIOGZX1NG\r\nFdtom/DzMNU+MeKNhJ7jitralj41E6Vf8PlwUHBHQRFXGU7Aj64GxJUTFy8bJZ91\r\n8rGOmaFvE7FBcf6IKshPECBV1/MUReXgRPTqh5Uykw7+U0b6LJ3/iyK5S9kJRaTe\r\npLiaWN0bfVKfjllDiIGknibVb63dDcY3fe0Dkhvld1927jyNxF1WW6LZZm6zNTfl\r\nMrY=\r\n-----END CERTIFICATE-----\r\n-----BEGIN CERTIFICATE-----\r\nMD8FPzA/Az8/AwIBAgIQHj8JXz8/R3AePz9/RT8wDQYJKj9IPz8NAQEMBQAwZTELMAkGA1UEBhMC\r\nVVMxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjE2MDQGA1UEAxMtTWljcm9zb2Z0IFJT\r\nQSBSb290IENlcnRpZmljYXRlIEF1dGhvcml0eSAyMDE3MB4XDTE5MTIxODIyNTEyMloXDTQyMDcx\r\nODIzMDAyM1owZTELMAkGA1UEBhMCVVMxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjE2\r\nMDQGA1UEAxMtTWljcm9zb2Z0IFJTQSBSb290IENlcnRpZmljYXRlIEF1dGhvcml0eSAyMDE3MD8C\r\nIjANBgkqP0g/Pw0BAQEFAAM/Ag8AMD8CCgI/AgEAP1s/PzM/KT8/Fgo/P0diPz8/Nj9GPz8/eGpv\r\nRz9oPydnUDMdPz8/Pz9DPz8CVwFdP0hAP1MQPz8/O2g/Pz8tPz9lPz9tGT8/ez9KPz8OP0tDHT8H\r\nPxM/Pz9kNTkEPz8/bD8/H1A/OGVQXBdGPz8/Pxw/Fz8/RT8/Jj8/P3BKP2A/Pz8/Pzs/V3I/Pz8/\r\nP0trPyNsAz8FPz8/P3M7Zj9kPxo/Lj9HBT8GPz9zP3gzWz8/Jyo/Pz8/Pz8/Oj8+dkA/P1JhUXAo\r\nPz8/Wj8/ST8UW00/P2dNTBI/Pz8/eD8/Pz8/XiA/P0siPz8/Pz9HP0dVez9FP2coPz8caDA/P0k/\r\nNXtkPz8/TT87PlU/KD9XPxM/Ric/Hj9eRD8/Pz8/Ez9LPz8/Pz9hP1IwP3ogT28POFM/MwwTKz8/\r\nPyo/LT8cfUtRP0c/SCdyXT8/P0U/SGU/P1I/P1s/GGVXEj9oPz8Vaz8/aSI/PzM/Pz9RP0FQPzRP\r\ndj8/Pzg/Pz97Pz8/P0ZpPw4KUGsTPz8PN1o/Ej8/Px5WP1ciPz8/Pz8/UT87P1U/Hg4/dAo/Pz9p\r\nPz8oP0g/Bz9SQzo/P1U1LD8/aj8/Pz8/Emo/RT9nPz8/Iz8/ClQ/FD8qPz8/Pz8/JVgyeT8/Wz85\r\nPwgGPz9/Dj0APwIDAQABP1QwUjAOBgNVHQ8BAT8EBAMCAT8wDwYDVR0TAQE/BAUwAwEBPzAdBgNV\r\nHQ4EFgQUCT9Zfz8/cD8aPzk/Pz8/TT8jMBAGCSsGAQQBPzcVAQQDAgEAMA0GCSo/SD8/DQEBDAUA\r\nAz8CAQA/Pz5dPxE/Pz8/Pz8VPxM/P0IuAj8WBVknPyA/Pxo/TT8/Vj9lQz8/AD9SP1U/UzltYkw/\r\nDVt8LkQ/PxA/P1M/Pz9POj9uET8/PxY/Pz9tP380dD8/Pz8/Pz9kPz8/Pz8JUzM/Pwo/SlE/b1U/\r\nPz8/Rj8/fz9QJWVgP0Y/MwQ/bD8/dFQlPz8/P1UVPT9tPwo/Ej9pP24/ZD9TPz9KdSA/Pw8/Pz8D\r\nP1kYP0c/P1daPz8/PxcrF0k/dj8/Vj86Nz8/aSw/Pz8/P0w/N3ZNPz8/bR4dPz8/Pz9FHRNtPz9Z\r\nPyIncis/P1c/MD8kTT99Vj8/Pz80eT8/Pz8CYT8/Pw8/HBcLP0E/fD8nPz8uOj8/P3MdJD8/WyA/\r\nPz9nZnk/Oj8/Mz9TPz9GPxE/P38/Pz9mMSBBED8tDD8/PzQ/P2Q/PxNXPz8/PHo/Pz8/PyE/cT8/\r\nZ3ESPwppGWQ/I1Y/PyoucD9mPww/Pz8/AT9qPz9nSz9oPz9iPz8/P3o7Xg8/P3w/Nz90Pz9PM3I/\r\nOW0/Ej8/DE5wfBtvPz8yP3NEFm0/Pz8/Pz8/P104Pz8/PwowPz8/TQBxYkUnSzpCP1t/ZT9nNFIt\r\nPxZrPz8/ez9CTHE/DD8+Pz8/ATBeUT95P3BpP0FEDz8/LD8/PT8PPw==\r\n-----END CERTIFICATE-----"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'keyVaultDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'mySQLServerDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "appServicePlanDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appServicePlanName": {
+            "value": "[variables('appServicePlanName')]"
+          },
+          "appServicePlanSku": {
+            "value": "[parameters('appServicePlanSku')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "16227728284110255997"
+            }
+          },
+          "parameters": {
+            "appServicePlanName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40,
+              "metadata": {
+                "description": "App Service Plan name"
+              }
+            },
+            "appServicePlanSku": {
+              "type": "string",
+              "allowedValues": [
+                "B1",
+                "B2",
+                "B3",
+                "S1",
+                "S2",
+                "S3",
+                "P1v2",
+                "P2v2",
+                "P3v2"
+              ],
+              "metadata": {
+                "description": "App Service Plan pricing tier"
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location to deploy the resources"
+              }
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace to use for diagnostics settings"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2024-11-01",
+              "name": "[parameters('appServicePlanName')]",
+              "location": "[parameters('location')]",
+              "kind": "linux",
+              "properties": {
+                "reserved": true
+              },
+              "sku": {
+                "name": "[parameters('appServicePlanSku')]"
+              }
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Web/serverfarms/{0}', parameters('appServicePlanName'))]",
+              "name": "AppServicePlanDiagnostics",
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "applicationInsightsDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "applicationInsightsName": {
+            "value": "[variables('applicationInsightsName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "2308274308348777131"
+            }
+          },
+          "parameters": {
+            "applicationInsightsName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 260,
+              "metadata": {
+                "description": "Application Insights name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location to deploy the resources"
+              }
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace to use for diagnostics settings"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[parameters('applicationInsightsName')]",
+              "location": "[parameters('location')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+              }
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Insights/components/{0}', parameters('applicationInsightsName'))]",
+              "name": "InsightsDiagnostics",
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ],
+                "logs": [
+                  {
+                    "category": "AppAvailabilityResults",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppBrowserTimings",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppEvents",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppMetrics",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppDependencies",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppExceptions",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppPageViews",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppPerformanceCounters",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppRequests",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppSystemEvents",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppTraces",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "mySQLServerDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "administratorLogin": {
+            "value": "[variables('databaseLogin')]"
+          },
+          "administratorPassword": {
+            "value": "[parameters('databasePassword')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
+          },
+          "mySQLServerName": {
+            "value": "[variables('mySQLServerName')]"
+          },
+          "mySQLServerSku": {
+            "value": "[parameters('mySQLServerSku')]"
+          },
+          "vNetName": {
+            "value": "[variables('vNetName')]"
+          },
+          "privateEndpointsSubnetName": {
+            "value": "[variables('privateEndpointsSubnetName')]"
+          },
+          "applicationName": {
+            "value": "[parameters('applicationName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "7489417813795870732"
+            }
+          },
+          "parameters": {
+            "mySQLServerName": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 63
+            },
+            "mySQLServerSku": {
+              "type": "string",
+              "allowedValues": [
+                "Standard_B1ms",
+                "Standard_B2ms"
+              ]
+            },
+            "mySQLServerVersion": {
+              "type": "string",
+              "defaultValue": "8.0.21"
+            },
+            "administratorLogin": {
+              "type": "string",
+              "minLength": 1,
+              "metadata": {
+                "description": "Database administrator login name"
+              }
+            },
+            "administratorPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Database administrator password"
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location to deploy the resources"
+              }
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace to use for diagnostics settings"
+              }
+            },
+            "applicationName": {
+              "type": "string",
+              "metadata": {
+                "description": "Prefix to use when creating the resources in this deployment."
+              }
+            },
+            "vNetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network for a private endpoint"
+              }
+            },
+            "privateEndpointsSubnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Target subnet to create a private endpoint"
+              }
+            }
+          },
+          "variables": {
+            "privateEndpointName": "[format('{0}-pe-mysql-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+            "privateDnsZoneName": "privatelink.mysql.database.azure.com",
+            "pvtEndpointDnsGroupName": "[format('{0}/mysql', variables('privateEndpointName'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.DBforMySQL/flexibleServers",
+              "apiVersion": "2024-12-01-preview",
+              "name": "[parameters('mySQLServerName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "[parameters('mySQLServerSku')]",
+                "tier": "Burstable"
+              },
+              "properties": {
+                "createMode": "Default",
+                "version": "[parameters('mySQLServerVersion')]",
+                "administratorLogin": "[parameters('administratorLogin')]",
+                "administratorLoginPassword": "[parameters('administratorPassword')]",
+                "network": {
+                  "publicNetworkAccess": "Disabled"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.DBforMySQL/flexibleServers/{0}', parameters('mySQLServerName'))]",
+              "name": "MySQLServerDiagnostics",
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ],
+                "logs": [
+                  {
+                    "category": "MySqlSlowLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "MySqlAuditLogs",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-07-01",
+              "name": "[variables('privateEndpointName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('privateEndpointsSubnetName'))]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[variables('privateEndpointName')]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]",
+                      "groupIds": [
+                        "mysqlServer"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "[variables('privateDnsZoneName')]",
+              "location": "global",
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2024-06-01",
+              "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', parameters('vNetName')))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vNetName'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-07-01",
+              "name": "[variables('pvtEndpointDnsGroupName')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config1",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]",
+                "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "fullyQualifiedDomainName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2024-12-01-preview').fullyQualifiedDomainName]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vNetDeploy')]"
+      ]
+    },
+    {
+      "condition": "[equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "FrontDoorDeploy",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "frontDoorProfileName": {
+            "value": "[variables('frontDoorName')]"
+          },
+          "applicationName": {
+            "value": "[parameters('applicationName')]"
+          },
+          "webAppName": {
+            "value": "[variables('webAppName')]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsWorkspaceName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "13008289827493158939"
+            }
+          },
+          "parameters": {
+            "frontDoorProfileName": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 64
+            },
+            "applicationName": {
+              "type": "string",
+              "metadata": {
+                "description": "Application name"
+              }
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace to use for diagnostics settings"
+              }
+            },
+            "webAppName": {
+              "type": "string",
+              "metadata": {
+                "description": "Web app to confire Front Door for"
+              }
+            }
+          },
+          "variables": {
+            "frontDoorEndpointName": "[parameters('applicationName')]",
+            "frontDoorOriginGroupName": "[format('{0}-OriginGroup', parameters('applicationName'))]",
+            "frontDoorOriginName": "[format('{0}-Origin', parameters('applicationName'))]",
+            "frontDoorRouteName": "[format('{0}-Route', parameters('applicationName'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Cdn/profiles",
+              "apiVersion": "2024-02-01",
+              "name": "[parameters('frontDoorProfileName')]",
+              "location": "global",
+              "sku": {
+                "name": "Standard_AzureFrontDoor"
+              }
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints",
+              "apiVersion": "2024-02-01",
+              "name": "[format('{0}/{1}', parameters('frontDoorProfileName'), variables('frontDoorEndpointName'))]",
+              "location": "global",
+              "properties": {
+                "enabledState": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups",
+              "apiVersion": "2024-02-01",
+              "name": "[format('{0}/{1}', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'))]",
+              "properties": {
+                "loadBalancingSettings": {
+                  "sampleSize": 4,
+                  "successfulSamplesRequired": 2
+                },
+                "healthProbeSettings": {
+                  "probePath": "/",
+                  "probeRequestType": "HEAD",
+                  "probeProtocol": "Https",
+                  "probeIntervalInSeconds": 120
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/originGroups/origins",
+              "apiVersion": "2024-02-01",
+              "name": "[format('{0}/{1}/{2}', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'), variables('frontDoorOriginName'))]",
+              "properties": {
+                "hostName": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').defaultHostName]",
+                "httpPort": 80,
+                "httpsPort": 443,
+                "originHostHeader": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').defaultHostName]",
+                "priority": 1,
+                "weight": 1000
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+              "apiVersion": "2024-02-01",
+              "name": "[format('{0}/{1}/{2}', parameters('frontDoorProfileName'), variables('frontDoorEndpointName'), variables('frontDoorRouteName'))]",
+              "properties": {
+                "originGroup": {
+                  "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'))]"
+                },
+                "supportedProtocols": [
+                  "Http",
+                  "Https"
+                ],
+                "patternsToMatch": [
+                  "/*"
+                ],
+                "forwardingProtocol": "HttpsOnly",
+                "linkToDefaultDomain": "Enabled",
+                "httpsRedirect": "Enabled",
+                "cacheConfiguration": {
+                  "compressionSettings": {
+                    "isCompressionEnabled": true,
+                    "contentTypesToCompress": [
+                      "application/eot",
+                      "application/font",
+                      "application/font-sfnt",
+                      "application/javascript",
+                      "application/json",
+                      "application/opentype",
+                      "application/otf",
+                      "application/pkcs7-mime",
+                      "application/truetype",
+                      "application/ttf",
+                      "application/vnd.ms-fontobject",
+                      "application/xhtml+xml",
+                      "application/xml",
+                      "application/xml+rss",
+                      "application/x-font-opentype",
+                      "application/x-font-truetype",
+                      "application/x-font-ttf",
+                      "application/x-httpd-cgi",
+                      "application/x-javascript",
+                      "application/x-mpegurl",
+                      "application/x-opentype",
+                      "application/x-otf",
+                      "application/x-perl",
+                      "application/x-ttf",
+                      "font/eot",
+                      "font/ttf",
+                      "font/otf",
+                      "font/opentype",
+                      "image/svg+xml",
+                      "text/css",
+                      "text/csv",
+                      "text/html",
+                      "text/javascript",
+                      "text/js",
+                      "text/plain",
+                      "text/richtext",
+                      "text/tab-separated-values",
+                      "text/xml",
+                      "text/x-script",
+                      "text/x-component",
+                      "text/x-java-source"
+                    ]
+                  },
+                  "queryStringCachingBehavior": "UseQueryString"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), variables('frontDoorEndpointName'))]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'), variables('frontDoorOriginName'))]",
+                "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Cdn/profiles/{0}', parameters('frontDoorProfileName'))]",
+              "name": "FrontDoorDiagnostics",
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ],
+                "logs": [
+                  {
+                    "category": "FrontdoorAccessLog",
+                    "enabled": true
+                  },
+                  {
+                    "category": "FrontdoorWebApplicationFirewallLog",
+                    "enabled": true
+                  },
+                  {
+                    "category": "FrontdoorHealthProbeLog",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', parameters('webAppName'), 'web')]",
+              "properties": {
+                "ipSecurityRestrictions": [
+                  {
+                    "ipAddress": "AzureFrontDoor.Backend",
+                    "action": "Allow",
+                    "tag": "ServiceTag",
+                    "priority": 100,
+                    "name": "Allow traffic from Front Door",
+                    "headers": {
+                      "x-azure-fdid": [
+                        "[reference(resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName')), '2024-02-01').frontDoorId]"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "frontDoorEndpointHostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), variables('frontDoorEndpointName')), '2024-02-01').hostName]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'logAnalyticsWorkspaceDeploy')]",
+        "[resourceId('Microsoft.Resources/deployments', 'webAppDeploy')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "webAppHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value]"
+    },
+    "endpointHostName": {
+      "type": "string",
+      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value))]"
+    }
+  }
+}
