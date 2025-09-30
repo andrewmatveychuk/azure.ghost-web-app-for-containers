@@ -2,8 +2,8 @@
 
 A one-click [Ghost](https://ghost.org/) deployment on Azure with options to deploy it to:
 
-* [Azure Web App for Containers](https://azure.microsoft.com/en-us/services/app-service/containers/).
-* [Azure Container Apps](https://azure.microsoft.com/en-us/products/container-apps/).
+* [Azure Web App for Containers](https://azure.microsoft.com/en-us/services/app-service/containers/)
+* [Azure Container Apps](https://azure.microsoft.com/en-us/products/container-apps/)
 
 ## Disclaimer
 
@@ -54,8 +54,8 @@ You can deploy it as a Container App with public access in a Container App Envir
 
 *Post-deployment steps:*
 
-*1) [Approve the private endpoint connection request from the Azure Front Door profile on your Container App Environment](https://learn.microsoft.com/en-us/azure/container-apps/how-to-integrate-with-azure-front-door?pivots=azure-portal#approve-the-private-endpoint-connection-request). This step cannot be automated, as you essentially need to approve a connection via Private Link from the Front Door externally managed environment.
+1) [Approve the private endpoint connection request from the Azure Front Door profile on your Container App Environment](https://learn.microsoft.com/en-us/azure/container-apps/how-to-integrate-with-azure-front-door?pivots=azure-portal#approve-the-private-endpoint-connection-request). This step cannot be automated, as you essentially need to approve a connection via Private Link from the Front Door externally managed environment.
 2) Check and copy the `endpointHostName` deployment output value for the app URL. Depending on the deployment configuration (Container App with public access or with Azure Front Door), it will point to the Container App or to the Front Door profile public endpoint.
-3) Update the `url` [environment variable in the container properties](https://learn.microsoft.com/en-us/azure/container-apps/environment-variables) with the `endpointHostName` output value. Ghost needs that variable to point to the website FQDN to work correctly. Updating a container (app) variable creates a new app revision.*
+3) Update the `url` [environment variable in the container properties](https://learn.microsoft.com/en-us/azure/container-apps/environment-variables) with the `endpointHostName` output value. Ghost needs that variable to point to the website FQDN to work correctly. Updating a container (app) variable creates a new app revision.
 
 It takes some time for the Ghost container to be pulled/started and the application to be initialized, so check the container deployment logs on the Container App for container status.
