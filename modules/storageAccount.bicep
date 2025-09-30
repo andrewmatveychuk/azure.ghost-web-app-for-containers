@@ -2,16 +2,18 @@ targetScope = 'resourceGroup'
 
 @minLength(3)
 @maxLength(24)
+@description('Name of the storage account to create. Must be between 3 and 24 characters in length and may contain numbers and lowercase letters only.')
 param storageAccountName string
-
-@allowed([
-  'PremiumV2_LRS'
-  'PremiumV2_ZRS'
-])
-param storageAccountSku string = 'PremiumV2_LRS'
-
+@description('Storage account SKU')
+param storageAccountSku string
+@description('Storage account kind')
+param storageAccountKind string
+@description('Indicates whether https traffic only should be enabled. Default is true.')
+param storageAccountHttpsTrafficOnly bool
 @description('File share to store application files')
 param fileShareFolderName string = 'content-files'
+@description('Additional properties for the file share, e.g., shareQuota. See https://learn.microsoft.com/en-us/azure/templates/microsoft.storage/storageaccounts/fileservices/shares for details.')
+param fileShareProperties object = {} // If empty, it will create an SMB file share with default properties
 
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
@@ -25,12 +27,12 @@ param applicationName string
 resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   name: storageAccountName
   location: location
-  kind: 'FileStorage'
+  kind: storageAccountKind
   sku: {
     name: storageAccountSku
   }
   properties: {
-    supportsHttpsTrafficOnly: false // https://learn.microsoft.com/en-us/azure/container-apps/storage-mounts?tabs=nfs&pivots=azure-cli#azure-files
+    supportsHttpsTrafficOnly: storageAccountHttpsTrafficOnly
     minimumTlsVersion: 'TLS1_2'
     publicNetworkAccess: 'Disabled'
   }
@@ -93,10 +95,7 @@ resource fileServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-
 resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2025-01-01' = {
   parent: fileServices
   name: fileShareFolderName
-  properties: {
-    shareQuota: 32 // Quota in GB
-    enabledProtocols: 'NFS'
-  }
+  properties: fileShareProperties
 }
 // End of configuring file services and file share
 

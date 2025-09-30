@@ -8,18 +8,16 @@ param location string = resourceGroup().location
 
 @description('Container App deployment configuration')
 @allowed([
-  'Container app only (public access)'
-  'Container app (private) with Azure Front Door Premium (private link access)'
+  'Container app with public access'
+  'Container app with Azure Front Door private link access'
 ])
-param deploymentConfiguration string = 'Container app only (public access)'
+param deploymentConfiguration string = 'Container app with public access'
 
-// Creating the virtual network and the subnet for private endpoints
+// Creating a virtual network and the subnet for private endpoints
 @description('Virtual network address prefix to use')
 param vNetAddressPrefix string = '10.0.0.0/22'
 @description('Address prefix for private links subnet')
 param privateEndpointsSubnetPrefix string = '10.0.3.240/28'
-@description('Address prefix for container environment subnet')
-param containerEnvironmentSubnetPrefix string = '10.0.0.0/27' // Minimal subnet size for Container App Environment with workload profiles
 
 var vNetName = '${applicationName}-vnet-${uniqueString(resourceGroup().id)}'
 var privateEndpointsSubnetName = 'pe-subnet'
@@ -35,7 +33,7 @@ module vNet 'modules/virtualNetwork.bicep' = {
   }
 }
 
-// Creating the Log Analytics workspace
+// Creating a Log Analytics workspace
 @description('Log Analytics workspace pricing tier')
 param logAnalyticsWorkspaceSku string = 'PerGB2018'
 
@@ -50,24 +48,28 @@ module logAnalyticsWorkspace 'modules/logAnalyticsWorkspace.bicep' = {
   }
 }
 
-// Creating the Application Insights
+// Creating an Application Insights
 var applicationInsightsName = '${applicationName}-ai-${uniqueString(resourceGroup().id)}'
 
 module applicationInsights 'modules/applicationInsights.bicep' = {
   name: 'applicationInsightsDeploy'
   params: {
     applicationInsightsName: applicationInsightsName
-    location: location
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+    location: location
   }
   dependsOn: [
     logAnalyticsWorkspace
   ]
 }
 
-// Creating the Storage account to be used as a persistent storage for the Container App
+// Creating a Storage account to be used as a persistent storage for the Container App
 @description('Storage account pricing tier')
-param storageAccountSku string = 'PremiumV2_LRS'
+@allowed([
+  'PremiumV2_LRS'
+  'PremiumV2_ZRS'
+])
+param storageAccountSku string = 'PremiumV2_LRS' // PremiumV2 is required for NFS support
 
 var ghostContentFileShareName = 'content-files'
 
@@ -79,7 +81,13 @@ module storageAccount 'modules/storageAccount.bicep' = {
   params: {
     storageAccountName: storageAccountName
     storageAccountSku: storageAccountSku
+    storageAccountKind: 'FileStorage' // FileStorage is required for NFS file shares
+    storageAccountHttpsTrafficOnly: false //This needs to be disabled for NFS file shares: https://learn.microsoft.com/en-us/azure/container-apps/storage-mounts
     fileShareFolderName: ghostContentFileShareName
+    fileShareProperties: {
+      shareQuota: 32 // Quota in GB (minimum for NFS)
+      enabledProtocols: 'NFS' // NFS is required for the Ghost container image to work
+    }
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     location: location
     vNetName: vNetName
@@ -93,7 +101,7 @@ module storageAccount 'modules/storageAccount.bicep' = {
   ]
 }
 
-// Creating the Managed Identity to be used by the Container App to access the Key Vault
+// Creating a Managed Identity to be used by the Container App to access the Key Vault
 var managedIdentityName = '${applicationName}-mi-${uniqueString(resourceGroup().id)}'
 
 module managedIdentity 'modules/managedIdentity.bicep' = {
@@ -103,14 +111,15 @@ module managedIdentity 'modules/managedIdentity.bicep' = {
   }
 }
 
-// Creating the Key Vault to store the database password
+// Creating a Key Vault to store the database password
 var keyVaultName = '${applicationName}-kv-${uniqueString(resourceGroup().id)}'
+var databaseSecretName = 'databasePassword'
 
 module keyVault 'modules/keyVault.bicep' = {
   name: 'keyVaultDeploy'
   params: {
     keyVaultName: keyVaultName
-    keyVaultSecretName: 'databasePassword'
+    keyVaultSecretName: databaseSecretName
     keyVaultSecretValue: databasePassword
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     location: location
@@ -126,14 +135,16 @@ module keyVault 'modules/keyVault.bicep' = {
   ]
 }
 
-// Creating the Container App Environment
+// Creating a Container App Environment
+@description('Address prefix for container environment subnet')
+param containerEnvironmentSubnetPrefix string = '10.0.0.0/27' // Minimal subnet size for Container App Environments with Workload Profiles
+
 var containerAppEnvironmentName = '${applicationName}-cenv-${uniqueString(resourceGroup().id)}'
 var containerAppEnvironmentStorageName = 'default' // Name of the storage to be used by the Container App Environment
+var containerEnvironmentSubnetName = 'cenv-subnet'
 
 // Configuring the Container App Environment to allow public access or private link access
-var internal = (deploymentConfiguration == 'Container app (private) with Azure Front Door Premium (private link access)')
-  ? true
-  : false
+var internal = (deploymentConfiguration == 'Container app with Azure Front Door private link access') ? true : false
 
 module containerAppEnvironment 'modules/containerAppEnvironment.bicep' = {
   name: 'containerAppEnvironmentDeploy'
@@ -143,7 +154,7 @@ module containerAppEnvironment 'modules/containerAppEnvironment.bicep' = {
     applicationInsightsName: applicationInsightsName
     containerAppEnvironmentName: containerAppEnvironmentName
     vNetName: vNetName
-    subnetName: 'cenv-subnet'
+    subnetName: containerEnvironmentSubnetName
     subnetPrefix: containerEnvironmentSubnetPrefix
     internal: internal
     containerAppEnvironmentStorageName: containerAppEnvironmentStorageName
@@ -158,18 +169,16 @@ module containerAppEnvironment 'modules/containerAppEnvironment.bicep' = {
   ]
 }
 
-// Creating the Container App
+// Creating a Container App
 
 @description('Ghost container full image name and tag')
-param ghostContainerName string = 'andrewmatveychuk/ghost-ai:latest'
-// param ghostContainerName string = 'azuredocs/containerapps-helloworld:latest'
+param ghostContainerName string = 'andrewmatveychuk/ghost-ai:latest' // You can use 'azuredocs/containerapps-helloworld:latest' for azuredocs sample
 
 @description('Container registry where the image is hosted')
-param containerRegistryName string = 'docker.io'
-// param containerRegistryName string = 'mcr.microsoft.com'
+param containerRegistryName string = 'docker.io' // You can use 'mcr.microsoft.com' for azuredocs sample
 
-// var containerImageURL = '${containerRegistryName}/${ghostContainerName}'
-var containerImageURL = 'ghost:latest'
+var containerImageURL = '${containerRegistryName}/${ghostContainerName}'
+// var containerImageURL = 'ghost:latest'
 
 var ghostContentFilesMountPath = '/var/lib/ghost/content'
 
@@ -223,10 +232,10 @@ var containerVariables = [
     name: 'privacy_useUpdateCheck'
     value: 'false'
   }
-  /* {
+  {
     name: 'url'
-    value: ''
-  } */
+    value: '' // This needs to be set manually after the deployment to the output value of 'endpointHostName', as updating container app environment variables creates a new revision
+  }
   {
     name: 'database__client'
     value: 'mysql'
@@ -248,7 +257,7 @@ var containerVariables = [
     secretRef: 'database-password'
   }
   {
-    // https://learn.microsoft.com/en-us/azure/mysql/flexible-server/concepts-root-certificate-rotation
+    // Check https://learn.microsoft.com/en-us/azure/mysql/flexible-server/concepts-root-certificate-rotation for details on the CA certificate
     name: 'database__connection__ssl__ca'
     value: '''
 -----BEGIN CERTIFICATE-----
@@ -336,7 +345,7 @@ module containerApp 'modules/containerApp.bicep' = {
       {
         name: ghostContentFileShareName
         storageName: containerAppEnvironmentStorageName
-        storageType: 'nfsAzureFile'
+        storageType: 'nfsAzureFile' // This should be an NFS file share as the Ghost container image doesn't work with SMB
       }
     ]
     containerVolumeMounts: [
@@ -391,10 +400,10 @@ module mySQLServer 'modules/mySQLServer.bicep' = {
   ]
 }
 
-// Creating the Front Door profile if required by the deployment configuration
+// Creating a Front Door profile if required by the deployment configuration
 var frontDoorName = '${applicationName}-afd-${uniqueString(resourceGroup().id)}'
 
-module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Container app (private) with Azure Front Door Premium (private link access)') {
+module frontDoor 'modules/frontDoorWithPrivateLink.bicep' = if (deploymentConfiguration == 'Container app with Azure Front Door private link access') {
   name: 'FrontDoorDeploy'
   params: {
     frontDoorProfileName: frontDoorName
@@ -411,6 +420,6 @@ module frontDoor 'modules/frontDoor.bicep' = if (deploymentConfiguration == 'Con
 }
 
 // output applicationHostName string = containerApp.outputs.hostName
-output endpointHostName string = (deploymentConfiguration == 'Container app (private) with Azure Front Door Premium (private link access)')
+output endpointHostName string = (deploymentConfiguration == 'Container app with Azure Front Door private link access')
   ? frontDoor!.outputs.frontDoorEndpointHostName
   : containerApp.outputs.hostName

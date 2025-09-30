@@ -34,25 +34,40 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
 }
 
 // Configuring virtual network integration
-@description('Virtual network for a private endpoint')
+@description('Virtual network to use for web app integration')
 param vNetName string
-@description('Target subnet to integrate web app')
-param webAppIntegrationSubnetName string
+@description('Subnet name for web app integration')
+param integrationSubnetName string
+@description('Subnet prefix for web app integration')
+param integrationSubnetPrefix string
+
+var delegatedServiceName = 'Microsoft.Web/serverFarms'
 
 resource existingVNet 'Microsoft.Network/virtualNetworks@2024-07-01' existing = {
   name: vNetName
 }
 
-resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' existing = {
-  name: webAppIntegrationSubnetName
+resource integrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' = {
+  name: integrationSubnetName
   parent: existingVNet
+  properties: {
+    addressPrefix: integrationSubnetPrefix
+    delegations: [
+      {
+        name: 'webAppDelegation'
+        properties: {
+          serviceName: delegatedServiceName
+        }
+      }
+    ]
+  }
 }
 
 resource webApp_VNetIntegration 'Microsoft.Web/sites/networkConfig@2024-11-01' = {
   parent: webApp
   name: 'virtualNetwork'
   properties: {
-    subnetResourceId: existingSubnet.id
+    subnetResourceId: integrationSubnet.id
   }
 }
 //End of configuring virtual network integration
