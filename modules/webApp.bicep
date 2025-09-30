@@ -13,11 +13,11 @@ param appServicePlanName string
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' existing = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' existing = {
   name: appServicePlanName
 }
 
-resource webApp 'Microsoft.Web/sites@2023-12-01' = {
+resource webApp 'Microsoft.Web/sites@2024-11-01' = {
   name: webAppName
   location: location
   kind: 'app,linux,container'
@@ -34,30 +34,46 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
 }
 
 // Configuring virtual network integration
-@description('Virtual network for a private endpoint')
+@description('Virtual network to use for web app integration')
 param vNetName string
-@description('Target subnet to integrate web app')
-param webAppIntegrationSubnetName string
+@description('Subnet name for web app integration')
+param integrationSubnetName string
+@description('Subnet prefix for web app integration')
+param integrationSubnetPrefix string
 
-resource existingvNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+var delegatedServiceName = 'Microsoft.Web/serverFarms'
+
+resource existingVNet 'Microsoft.Network/virtualNetworks@2024-07-01' existing = {
   name: vNetName
 }
 
-resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
-  name: webAppIntegrationSubnetName
-  parent: existingvNet
+resource integrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' = {
+  name: integrationSubnetName
+  parent: existingVNet
+  properties: {
+    addressPrefix: integrationSubnetPrefix
+    delegations: [
+      {
+        name: 'webAppDelegation'
+        properties: {
+          serviceName: delegatedServiceName
+        }
+      }
+    ]
+  }
 }
 
-resource webApp_vNetIntegration 'Microsoft.Web/sites/networkConfig@2023-12-01' = {
+resource webApp_VNetIntegration 'Microsoft.Web/sites/networkConfig@2024-11-01' = {
   parent: webApp
   name: 'virtualNetwork'
   properties: {
-    subnetResourceId: existingSubnet.id
+    subnetResourceId: integrationSubnet.id
   }
 }
 //End of configuring virtual network integration
 
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+// Configuring diagnostics settings for web app
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -100,5 +116,8 @@ resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
     ]
   }
 }
+// End of configuring diagnostics settings for web app
 
 output hostName string = webApp.properties.hostNames[0]
+output principalId string = webApp.identity.principalId
+output principalName string = webApp.name

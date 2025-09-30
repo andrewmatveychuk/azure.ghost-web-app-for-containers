@@ -4,12 +4,12 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.30.23.60470",
-      "templateHash": "8997457429743401680"
+      "version": "0.37.4.10188",
+      "templateHash": "17721449061908079179"
     }
   },
   "parameters": {
-    "applicationNamePrefix": {
+    "applicationName": {
       "type": "string",
       "defaultValue": "ghost",
       "metadata": {
@@ -33,6 +33,11 @@
     "storageAccountSku": {
       "type": "string",
       "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_ZRS"
+      ],
       "metadata": {
         "description": "Storage account pricing tier"
       }
@@ -73,13 +78,13 @@
     },
     "deploymentConfiguration": {
       "type": "string",
-      "defaultValue": "Web app only",
+      "defaultValue": "Web app with public access",
       "allowedValues": [
-        "Web app only",
+        "Web app with public access",
         "Web app with Azure Front Door"
       ]
     },
-    "vnetAddressPrefix": {
+    "vNetAddressPrefix": {
       "type": "string",
       "defaultValue": "10.0.0.0/26",
       "metadata": {
@@ -102,21 +107,21 @@
     }
   },
   "variables": {
-    "vNetName": "[format('{0}-vnet-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "privateEndpointsSubnetName": "privateEndpointsSubnet",
-    "webAppIntegrationSubnetName": "webAppIntegrationSubnet",
-    "webAppName": "[format('{0}-web-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "appServicePlanName": "[format('{0}-asp-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "logAnalyticsWorkspaceName": "[format('{0}-la-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "applicationInsightsName": "[format('{0}-ai-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "keyVaultName": "[format('{0}-kv-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "storageAccountName": "[format('{0}stor{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
-    "mySQLServerName": "[format('{0}-mysql-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]",
+    "vNetName": "[format('{0}-vnet-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "privateEndpointsSubnetName": "pe-subnet",
+    "webAppIntegrationSubnetName": "asp-integration-subnet",
+    "webAppName": "[format('{0}-web-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "appServicePlanName": "[format('{0}-asp-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "logAnalyticsWorkspaceName": "[format('{0}-la-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "applicationInsightsName": "[format('{0}-ai-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "keyVaultName": "[format('{0}-kv-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "storageAccountName": "[format('{0}stor{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+    "mySQLServerName": "[format('{0}-mysql-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
     "databaseLogin": "ghost",
     "databaseName": "ghost",
     "ghostContentFileShareName": "contentfiles",
     "ghostContentFilesMountPath": "/var/lib/ghost/content_files",
-    "frontDoorName": "[format('{0}-afd-{1}', parameters('applicationNamePrefix'), uniqueString(resourceGroup().id))]"
+    "frontDoorName": "[format('{0}-afd-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]"
   },
   "resources": [
     {
@@ -133,19 +138,13 @@
             "value": "[variables('vNetName')]"
           },
           "vNetAddressPrefix": {
-            "value": "[parameters('vnetAddressPrefix')]"
+            "value": "[parameters('vNetAddressPrefix')]"
           },
           "privateEndpointsSubnetName": {
             "value": "[variables('privateEndpointsSubnetName')]"
           },
           "privateEndpointsSubnetPrefix": {
             "value": "[parameters('privateEndpointsSubnetPrefix')]"
-          },
-          "webAppIntegrationSubnetName": {
-            "value": "[variables('webAppIntegrationSubnetName')]"
-          },
-          "webAppIntegrationSubnetPrefix": {
-            "value": "[parameters('webAppIntegrationSubnetPrefix')]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -157,8 +156,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "13276601988336369726"
+              "version": "0.37.4.10188",
+              "templateHash": "14389946328870371630"
             }
           },
           "parameters": {
@@ -168,12 +167,6 @@
               "maxLength": 64
             },
             "vNetAddressPrefix": {
-              "type": "string"
-            },
-            "webAppIntegrationSubnetName": {
-              "type": "string"
-            },
-            "webAppIntegrationSubnetPrefix": {
               "type": "string"
             },
             "privateEndpointsSubnetName": {
@@ -193,7 +186,7 @@
           "resources": [
             {
               "type": "Microsoft.Network/virtualNetworks",
-              "apiVersion": "2024-01-01",
+              "apiVersion": "2024-07-01",
               "name": "[parameters('vNetName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -204,23 +197,10 @@
                 },
                 "subnets": [
                   {
-                    "name": "[parameters('webAppIntegrationSubnetName')]",
-                    "properties": {
-                      "addressPrefix": "[parameters('webAppIntegrationSubnetPrefix')]",
-                      "delegations": [
-                        {
-                          "name": "delegation",
-                          "properties": {
-                            "serviceName": "Microsoft.Web/serverFarms"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
                     "name": "[parameters('privateEndpointsSubnetName')]",
                     "properties": {
-                      "addressPrefix": "[parameters('privateEndpointsSubnetPrefix')]"
+                      "addressPrefix": "[parameters('privateEndpointsSubnetPrefix')]",
+                      "privateLinkServiceNetworkPolicies": "Disabled"
                     }
                   }
                 ]
@@ -256,8 +236,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "13473061345376051581"
+              "version": "0.37.4.10188",
+              "templateHash": "15338368156198984868"
             }
           },
           "parameters": {
@@ -289,7 +269,7 @@
           "resources": [
             {
               "type": "Microsoft.OperationalInsights/workspaces",
-              "apiVersion": "2023-09-01",
+              "apiVersion": "2025-02-01",
               "name": "[parameters('logAnalyticsWorkspaceName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -318,6 +298,12 @@
           "storageAccountSku": {
             "value": "[parameters('storageAccountSku')]"
           },
+          "storageAccountKind": {
+            "value": "StorageV2"
+          },
+          "storageAccountHttpsTrafficOnly": {
+            "value": true
+          },
           "fileShareFolderName": {
             "value": "[variables('ghostContentFileShareName')]"
           },
@@ -332,6 +318,9 @@
           },
           "privateEndpointsSubnetName": {
             "value": "[variables('privateEndpointsSubnetName')]"
+          },
+          "applicationName": {
+            "value": "[parameters('applicationName')]"
           }
         },
         "template": {
@@ -340,28 +329,49 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "12410567274693854822"
+              "version": "0.37.4.10188",
+              "templateHash": "11995357983181777453"
             }
           },
           "parameters": {
             "storageAccountName": {
               "type": "string",
               "minLength": 3,
-              "maxLength": 24
+              "maxLength": 24,
+              "metadata": {
+                "description": "Name of the storage account to create. Must be between 3 and 24 characters in length and may contain numbers and lowercase letters only."
+              }
             },
             "storageAccountSku": {
               "type": "string",
-              "allowedValues": [
-                "Standard_LRS",
-                "Standard_GRS",
-                "Standard_ZRS"
-              ]
+              "metadata": {
+                "description": "Storage account SKU"
+              }
+            },
+            "storageAccountKind": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account kind"
+              }
+            },
+            "storageAccountHttpsTrafficOnly": {
+              "type": "bool",
+              "metadata": {
+                "description": "Indicates whether https traffic only should be enabled. Default is true."
+              }
             },
             "fileShareFolderName": {
               "type": "string",
+              "defaultValue": "content-files",
               "metadata": {
-                "description": "File share to store Ghost content files"
+                "description": "File share to store application files"
+              }
+            },
+            "fileShareProperties": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Additional properties for the file share, e.g., shareQuota. See https://learn.microsoft.com/en-us/azure/templates/microsoft.storage/storageaccounts/fileservices/shares for details."
               }
             },
             "location": {
@@ -377,6 +387,12 @@
                 "description": "Log Analytics workspace to use for diagnostics settings"
               }
             },
+            "applicationName": {
+              "type": "string",
+              "metadata": {
+                "description": "Prefix to use when creating the resources in this deployment."
+              }
+            },
             "vNetName": {
               "type": "string",
               "metadata": {
@@ -388,25 +404,31 @@
               "metadata": {
                 "description": "Target subnet to create a private endpoint"
               }
+            },
+            "privateEndpointName": {
+              "type": "string",
+              "defaultValue": "[format('{0}-pl-file-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
+              "metadata": {
+                "description": "File share private endpoint name"
+              }
             }
           },
           "variables": {
-            "privateEndpointName": "[format('ghost-pl-file-{0}', uniqueString(resourceGroup().id))]",
             "privateDnsZoneName": "[format('privatelink.file.{0}', environment().suffixes.storage)]",
-            "pvtEndpointDnsGroupName": "[format('{0}/file', variables('privateEndpointName'))]"
+            "pvtEndpointDnsGroupName": "[format('{0}/file', parameters('privateEndpointName'))]"
           },
           "resources": [
             {
               "type": "Microsoft.Storage/storageAccounts",
-              "apiVersion": "2023-05-01",
+              "apiVersion": "2025-01-01",
               "name": "[parameters('storageAccountName')]",
               "location": "[parameters('location')]",
-              "kind": "StorageV2",
+              "kind": "[parameters('storageAccountKind')]",
               "sku": {
                 "name": "[parameters('storageAccountSku')]"
               },
               "properties": {
-                "supportsHttpsTrafficOnly": true,
+                "supportsHttpsTrafficOnly": "[parameters('storageAccountHttpsTrafficOnly')]",
                 "minimumTlsVersion": "TLS1_2",
                 "publicNetworkAccess": "Disabled"
               }
@@ -431,7 +453,7 @@
             },
             {
               "type": "Microsoft.Storage/storageAccounts/fileServices",
-              "apiVersion": "2023-05-01",
+              "apiVersion": "2025-01-01",
               "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
               "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
@@ -471,8 +493,9 @@
             },
             {
               "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
-              "apiVersion": "2023-05-01",
+              "apiVersion": "2025-01-01",
               "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', parameters('fileShareFolderName'))]",
+              "properties": "[parameters('fileShareProperties')]",
               "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]"
               ]
@@ -502,7 +525,7 @@
             {
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2024-01-01",
-              "name": "[variables('privateEndpointName')]",
+              "name": "[parameters('privateEndpointName')]",
               "location": "[parameters('location')]",
               "properties": {
                 "subnet": {
@@ -510,7 +533,7 @@
                 },
                 "privateLinkServiceConnections": [
                   {
-                    "name": "[variables('privateEndpointName')]",
+                    "name": "[parameters('privateEndpointName')]",
                     "properties": {
                       "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
                       "groupIds": [
@@ -540,7 +563,7 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneName'))]",
-                "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+                "[resourceId('Microsoft.Network/privateEndpoints', parameters('privateEndpointName'))]"
               ]
             }
           ],
@@ -588,7 +611,13 @@
           "privateEndpointsSubnetName": {
             "value": "[variables('privateEndpointsSubnetName')]"
           },
-          "webAppName": {
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.principalId.value]"
+          },
+          "principalName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.principalName.value]"
+          },
+          "applicationName": {
             "value": "[variables('webAppName')]"
           }
         },
@@ -598,8 +627,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "9069185564724621321"
+              "version": "0.37.4.10188",
+              "templateHash": "10512531244869550853"
             }
           },
           "parameters": {
@@ -638,10 +667,22 @@
                 "description": "Log Analytics workspace to use for diagnostics settings"
               }
             },
-            "webAppName": {
+            "principalName": {
               "type": "string",
               "metadata": {
-                "description": "Web App name to provide access to Key Vault"
+                "description": "Service principal name to provide access to Key Vault"
+              }
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Service principal ID to provide access to Key Vault"
+              }
+            },
+            "applicationName": {
+              "type": "string",
+              "metadata": {
+                "description": "Prefix to use when creating the resources in this deployment."
               }
             },
             "vNetName": {
@@ -668,14 +709,14 @@
               "Key Vault Secrets Officer": "b86a8fe4-44ce-4948-aee5-eccb2c155cd7",
               "Key Vault Secrets User": "4633458b-17de-408a-b874-0445c86b69e6"
             },
-            "privateEndpointName": "[format('ghost-pl-kv-{0}', uniqueString(resourceGroup().id))]",
+            "privateEndpointName": "[format('{0}-pe-kv-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
             "privateDnsZoneName": "privatelink.vaultcore.azure.net",
             "pvtEndpointDnsGroupName": "[format('{0}/keyvault', variables('privateEndpointName'))]"
           },
           "resources": [
             {
               "type": "Microsoft.KeyVault/vaults",
-              "apiVersion": "2024-04-01-preview",
+              "apiVersion": "2024-12-01-preview",
               "name": "[parameters('keyVaultName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -695,10 +736,10 @@
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
-              "name": "[guid(variables('roleIdMapping')['Key Vault Secrets User'], parameters('webAppName'), parameters('keyVaultName'))]",
+              "name": "[guid(variables('roleIdMapping')['Key Vault Secrets User'], parameters('principalName'), parameters('keyVaultName'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleIdMapping')['Key Vault Secrets User'])]",
-                "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01', 'full').identity.principalId]",
+                "principalId": "[parameters('principalId')]",
                 "principalType": "ServicePrincipal"
               },
               "dependsOn": [
@@ -707,7 +748,7 @@
             },
             {
               "type": "Microsoft.KeyVault/vaults/secrets",
-              "apiVersion": "2024-04-01-preview",
+              "apiVersion": "2024-12-01-preview",
               "name": "[format('{0}/{1}', parameters('keyVaultName'), parameters('keyVaultSecretName'))]",
               "properties": {
                 "value": "[parameters('keyVaultSecretValue')]"
@@ -746,14 +787,14 @@
             },
             {
               "type": "Microsoft.Network/privateDnsZones",
-              "apiVersion": "2020-06-01",
+              "apiVersion": "2024-06-01",
               "name": "[variables('privateDnsZoneName')]",
               "location": "global",
               "properties": {}
             },
             {
               "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
-              "apiVersion": "2020-06-01",
+              "apiVersion": "2024-06-01",
               "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', parameters('vNetName')))]",
               "location": "global",
               "properties": {
@@ -768,7 +809,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2024-01-01",
+              "apiVersion": "2024-07-01",
               "name": "[variables('privateEndpointName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -793,7 +834,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
-              "apiVersion": "2024-01-01",
+              "apiVersion": "2024-07-01",
               "name": "[variables('pvtEndpointDnsGroupName')]",
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -814,7 +855,7 @@
           "outputs": {
             "secretUri": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), parameters('keyVaultSecretName')), '2024-04-01-preview').secretUri]"
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), parameters('keyVaultSecretName')), '2024-12-01-preview').secretUri]"
             }
           }
         }
@@ -850,8 +891,11 @@
           "vNetName": {
             "value": "[variables('vNetName')]"
           },
-          "webAppIntegrationSubnetName": {
+          "integrationSubnetName": {
             "value": "[variables('webAppIntegrationSubnetName')]"
+          },
+          "integrationSubnetPrefix": {
+            "value": "[parameters('webAppIntegrationSubnetPrefix')]"
           }
         },
         "template": {
@@ -860,8 +904,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "3851544837282189935"
+              "version": "0.37.4.10188",
+              "templateHash": "161171159291713123"
             }
           },
           "parameters": {
@@ -892,20 +936,29 @@
             "vNetName": {
               "type": "string",
               "metadata": {
-                "description": "Virtual network for a private endpoint"
+                "description": "Virtual network to use for web app integration"
               }
             },
-            "webAppIntegrationSubnetName": {
+            "integrationSubnetName": {
               "type": "string",
               "metadata": {
-                "description": "Target subnet to integrate web app"
+                "description": "Subnet name for web app integration"
+              }
+            },
+            "integrationSubnetPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet prefix for web app integration"
               }
             }
+          },
+          "variables": {
+            "delegatedServiceName": "Microsoft.Web/serverFarms"
           },
           "resources": [
             {
               "type": "Microsoft.Web/sites",
-              "apiVersion": "2023-12-01",
+              "apiVersion": "2024-11-01",
               "name": "[parameters('webAppName')]",
               "location": "[parameters('location')]",
               "kind": "app,linux,container",
@@ -921,13 +974,30 @@
               }
             },
             {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2024-07-01",
+              "name": "[format('{0}/{1}', parameters('vNetName'), parameters('integrationSubnetName'))]",
+              "properties": {
+                "addressPrefix": "[parameters('integrationSubnetPrefix')]",
+                "delegations": [
+                  {
+                    "name": "webAppDelegation",
+                    "properties": {
+                      "serviceName": "[variables('delegatedServiceName')]"
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "type": "Microsoft.Web/sites/networkConfig",
-              "apiVersion": "2023-12-01",
+              "apiVersion": "2024-11-01",
               "name": "[format('{0}/{1}', parameters('webAppName'), 'virtualNetwork')]",
               "properties": {
-                "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('webAppIntegrationSubnetName'))]"
+                "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('integrationSubnetName'))]"
               },
               "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('integrationSubnetName'))]",
                 "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
               ]
             },
@@ -979,7 +1049,15 @@
           "outputs": {
             "hostName": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').hostNames[0]]"
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2024-11-01').hostNames[0]]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2024-11-01', 'full').identity.principalId]"
+            },
+            "principalName": {
+              "type": "string",
+              "value": "[parameters('webAppName')]"
             }
           }
         }
@@ -1024,7 +1102,7 @@
           "databasePasswordSecretUri": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVaultDeploy'), '2022-09-01').outputs.secretUri.value]"
           },
-          "siteUrl": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value))]",
+          "siteUrl": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), createObject('value', format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value)), createObject('value', format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value)))]",
           "applicationInsightsName": {
             "value": "[variables('applicationInsightsName')]"
           },
@@ -1041,8 +1119,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "2191611319233818305"
+              "version": "0.37.4.10188",
+              "templateHash": "16262852731161086528"
             }
           },
           "parameters": {
@@ -1166,7 +1244,7 @@
                 "database__connection__user": "[parameters('databaseLogin')]",
                 "database__connection__password": "[format('@Microsoft.KeyVault(SecretUri={0})', parameters('databasePasswordSecretUri'))]",
                 "database__connection__database": "[parameters('databaseName')]",
-                "database__connection__ssl__ca": "-----BEGIN CERTIFICATE-----\r\nMIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\r\nMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\nd3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD\r\nQTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT\r\nMRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\r\nb20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG\r\n9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB\r\nCSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97\r\nnh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt\r\n43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P\r\nT19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4\r\ngdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO\r\nBgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR\r\nTLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw\r\nDQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr\r\nhMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg\r\n06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF\r\nPnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls\r\nYSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk\r\nCAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=\r\n-----END CERTIFICATE-----"
+                "database__connection__ssl__ca": "-----BEGIN CERTIFICATE-----\r\nMIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\r\nMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\nd3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD\r\nQTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT\r\nMRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\r\nb20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG\r\n9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB\r\nCSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97\r\nnh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt\r\n43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P\r\nT19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4\r\ngdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO\r\nBgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR\r\nTLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw\r\nDQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr\r\nhMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg\r\n06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF\r\nPnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls\r\nYSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk\r\nCAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=\r\n-----END CERTIFICATE-----\r\n-----BEGIN CERTIFICATE-----\r\nMIIDjjCCAnagAwIBAgIQAzrx5qcRqaC7KGSxHQn65TANBgkqhkiG9w0BAQsFADBh\r\nMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\nd3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBH\r\nMjAeFw0xMzA4MDExMjAwMDBaFw0zODAxMTUxMjAwMDBaMGExCzAJBgNVBAYTAlVT\r\nMRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\r\nb20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IEcyMIIBIjANBgkqhkiG\r\n9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuzfNNNx7a8myaJCtSnX/RrohCgiN9RlUyfuI\r\n2/Ou8jqJkTx65qsGGmvPrC3oXgkkRLpimn7Wo6h+4FR1IAWsULecYxpsMNzaHxmx\r\n1x7e/dfgy5SDN67sH0NO3Xss0r0upS/kqbitOtSZpLYl6ZtrAGCSYP9PIUkY92eQ\r\nq2EGnI/yuum06ZIya7XzV+hdG82MHauVBJVJ8zUtluNJbd134/tJS7SsVQepj5Wz\r\ntCO7TG1F8PapspUwtP1MVYwnSlcUfIKdzXOS0xZKBgyMUNGPHgm+F6HmIcr9g+UQ\r\nvIOlCsRnKPZzFBQ9RnbDhxSJITRNrw9FDKZJobq7nMWxM4MphQIDAQABo0IwQDAP\r\nBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQUTiJUIBiV\r\n5uNu5g/6+rkS7QYXjzkwDQYJKoZIhvcNAQELBQADggEBAGBnKJRvDkhj6zHd6mcY\r\n1Yl9PMWLSn/pvtsrF9+wX3N3KjITOYFnQoQj8kVnNeyIv/iPsGEMNKSuIEyExtv4\r\nNeF22d+mQrvHRAiGfzZ0JFrabA0UWTW98kndth/Jsw1HKj2ZL7tcu7XUIOGZX1NG\r\nFdtom/DzMNU+MeKNhJ7jitralj41E6Vf8PlwUHBHQRFXGU7Aj64GxJUTFy8bJZ91\r\n8rGOmaFvE7FBcf6IKshPECBV1/MUReXgRPTqh5Uykw7+U0b6LJ3/iyK5S9kJRaTe\r\npLiaWN0bfVKfjllDiIGknibVb63dDcY3fe0Dkhvld1927jyNxF1WW6LZZm6zNTfl\r\nMrY=\r\n-----END CERTIFICATE-----\r\n-----BEGIN CERTIFICATE-----\r\nMD8FPzA/Az8/AwIBAgIQHj8JXz8/R3AePz9/RT8wDQYJKj9IPz8NAQEMBQAwZTELMAkGA1UEBhMC\r\nVVMxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjE2MDQGA1UEAxMtTWljcm9zb2Z0IFJT\r\nQSBSb290IENlcnRpZmljYXRlIEF1dGhvcml0eSAyMDE3MB4XDTE5MTIxODIyNTEyMloXDTQyMDcx\r\nODIzMDAyM1owZTELMAkGA1UEBhMCVVMxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjE2\r\nMDQGA1UEAxMtTWljcm9zb2Z0IFJTQSBSb290IENlcnRpZmljYXRlIEF1dGhvcml0eSAyMDE3MD8C\r\nIjANBgkqP0g/Pw0BAQEFAAM/Ag8AMD8CCgI/AgEAP1s/PzM/KT8/Fgo/P0diPz8/Nj9GPz8/eGpv\r\nRz9oPydnUDMdPz8/Pz9DPz8CVwFdP0hAP1MQPz8/O2g/Pz8tPz9lPz9tGT8/ez9KPz8OP0tDHT8H\r\nPxM/Pz9kNTkEPz8/bD8/H1A/OGVQXBdGPz8/Pxw/Fz8/RT8/Jj8/P3BKP2A/Pz8/Pzs/V3I/Pz8/\r\nP0trPyNsAz8FPz8/P3M7Zj9kPxo/Lj9HBT8GPz9zP3gzWz8/Jyo/Pz8/Pz8/Oj8+dkA/P1JhUXAo\r\nPz8/Wj8/ST8UW00/P2dNTBI/Pz8/eD8/Pz8/XiA/P0siPz8/Pz9HP0dVez9FP2coPz8caDA/P0k/\r\nNXtkPz8/TT87PlU/KD9XPxM/Ric/Hj9eRD8/Pz8/Ez9LPz8/Pz9hP1IwP3ogT28POFM/MwwTKz8/\r\nPyo/LT8cfUtRP0c/SCdyXT8/P0U/SGU/P1I/P1s/GGVXEj9oPz8Vaz8/aSI/PzM/Pz9RP0FQPzRP\r\ndj8/Pzg/Pz97Pz8/P0ZpPw4KUGsTPz8PN1o/Ej8/Px5WP1ciPz8/Pz8/UT87P1U/Hg4/dAo/Pz9p\r\nPz8oP0g/Bz9SQzo/P1U1LD8/aj8/Pz8/Emo/RT9nPz8/Iz8/ClQ/FD8qPz8/Pz8/JVgyeT8/Wz85\r\nPwgGPz9/Dj0APwIDAQABP1QwUjAOBgNVHQ8BAT8EBAMCAT8wDwYDVR0TAQE/BAUwAwEBPzAdBgNV\r\nHQ4EFgQUCT9Zfz8/cD8aPzk/Pz8/TT8jMBAGCSsGAQQBPzcVAQQDAgEAMA0GCSo/SD8/DQEBDAUA\r\nAz8CAQA/Pz5dPxE/Pz8/Pz8VPxM/P0IuAj8WBVknPyA/Pxo/TT8/Vj9lQz8/AD9SP1U/UzltYkw/\r\nDVt8LkQ/PxA/P1M/Pz9POj9uET8/PxY/Pz9tP380dD8/Pz8/Pz9kPz8/Pz8JUzM/Pwo/SlE/b1U/\r\nPz8/Rj8/fz9QJWVgP0Y/MwQ/bD8/dFQlPz8/P1UVPT9tPwo/Ej9pP24/ZD9TPz9KdSA/Pw8/Pz8D\r\nP1kYP0c/P1daPz8/PxcrF0k/dj8/Vj86Nz8/aSw/Pz8/P0w/N3ZNPz8/bR4dPz8/Pz9FHRNtPz9Z\r\nPyIncis/P1c/MD8kTT99Vj8/Pz80eT8/Pz8CYT8/Pw8/HBcLP0E/fD8nPz8uOj8/P3MdJD8/WyA/\r\nPz9nZnk/Oj8/Mz9TPz9GPxE/P38/Pz9mMSBBED8tDD8/PzQ/P2Q/PxNXPz8/PHo/Pz8/PyE/cT8/\r\nZ3ESPwppGWQ/I1Y/PyoucD9mPww/Pz8/AT9qPz9nSz9oPz9iPz8/P3o7Xg8/P3w/Nz90Pz9PM3I/\r\nOW0/Ej8/DE5wfBtvPz8yP3NEFm0/Pz8/Pz8/P104Pz8/PwowPz8/TQBxYkUnSzpCP1t/ZT9nNFIt\r\nPxZrPz8/ez9CTHE/DD8+Pz8/ATBeUT95P3BpP0FEDz8/LD8/PT8PPw==\r\n-----END CERTIFICATE-----"
               }
             }
           ]
@@ -1209,8 +1287,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "863989816776429759"
+              "version": "0.37.4.10188",
+              "templateHash": "16227728284110255997"
             }
           },
           "parameters": {
@@ -1256,7 +1334,7 @@
           "resources": [
             {
               "type": "Microsoft.Web/serverfarms",
-              "apiVersion": "2023-12-01",
+              "apiVersion": "2024-11-01",
               "name": "[parameters('appServicePlanName')]",
               "location": "[parameters('location')]",
               "kind": "linux",
@@ -1310,9 +1388,6 @@
           },
           "logAnalyticsWorkspaceName": {
             "value": "[variables('logAnalyticsWorkspaceName')]"
-          },
-          "webAppName": {
-            "value": "[variables('webAppName')]"
           }
         },
         "template": {
@@ -1321,8 +1396,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "5770548446304345073"
+              "version": "0.37.4.10188",
+              "templateHash": "2308274308348777131"
             }
           },
           "parameters": {
@@ -1346,12 +1421,6 @@
               "metadata": {
                 "description": "Log Analytics workspace to use for diagnostics settings"
               }
-            },
-            "webAppName": {
-              "type": "string",
-              "metadata": {
-                "description": "App Service to link Application Insights to"
-              }
             }
           },
           "resources": [
@@ -1360,9 +1429,6 @@
               "apiVersion": "2020-02-02",
               "name": "[parameters('applicationInsightsName')]",
               "location": "[parameters('location')]",
-              "tags": {
-                "[format('hidden-link:{0}', resourceId('Microsoft.Web/sites', parameters('webAppName')))]": "Resource"
-              },
               "kind": "web",
               "properties": {
                 "Application_Type": "web",
@@ -1474,6 +1540,9 @@
           },
           "privateEndpointsSubnetName": {
             "value": "[variables('privateEndpointsSubnetName')]"
+          },
+          "applicationName": {
+            "value": "[parameters('applicationName')]"
           }
         },
         "template": {
@@ -1482,8 +1551,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "16514283641049006338"
+              "version": "0.37.4.10188",
+              "templateHash": "7489417813795870732"
             }
           },
           "parameters": {
@@ -1498,6 +1567,10 @@
                 "Standard_B1ms",
                 "Standard_B2ms"
               ]
+            },
+            "mySQLServerVersion": {
+              "type": "string",
+              "defaultValue": "8.0.21"
             },
             "administratorLogin": {
               "type": "string",
@@ -1525,6 +1598,12 @@
                 "description": "Log Analytics workspace to use for diagnostics settings"
               }
             },
+            "applicationName": {
+              "type": "string",
+              "metadata": {
+                "description": "Prefix to use when creating the resources in this deployment."
+              }
+            },
             "vNetName": {
               "type": "string",
               "metadata": {
@@ -1539,14 +1618,14 @@
             }
           },
           "variables": {
-            "privateEndpointName": "[format('ghost-pl-mysql-{0}', uniqueString(resourceGroup().id))]",
+            "privateEndpointName": "[format('{0}-pe-mysql-{1}', parameters('applicationName'), uniqueString(resourceGroup().id))]",
             "privateDnsZoneName": "privatelink.mysql.database.azure.com",
             "pvtEndpointDnsGroupName": "[format('{0}/mysql', variables('privateEndpointName'))]"
           },
           "resources": [
             {
               "type": "Microsoft.DBforMySQL/flexibleServers",
-              "apiVersion": "2023-12-30",
+              "apiVersion": "2024-12-01-preview",
               "name": "[parameters('mySQLServerName')]",
               "location": "[parameters('location')]",
               "sku": {
@@ -1555,7 +1634,7 @@
               },
               "properties": {
                 "createMode": "Default",
-                "version": "8.0.21",
+                "version": "[parameters('mySQLServerVersion')]",
                 "administratorLogin": "[parameters('administratorLogin')]",
                 "administratorLoginPassword": "[parameters('administratorPassword')]",
                 "network": {
@@ -1593,7 +1672,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2024-01-01",
+              "apiVersion": "2024-07-01",
               "name": "[variables('privateEndpointName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -1618,14 +1697,14 @@
             },
             {
               "type": "Microsoft.Network/privateDnsZones",
-              "apiVersion": "2020-06-01",
+              "apiVersion": "2024-06-01",
               "name": "[variables('privateDnsZoneName')]",
               "location": "global",
               "properties": {}
             },
             {
               "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
-              "apiVersion": "2020-06-01",
+              "apiVersion": "2024-06-01",
               "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', parameters('vNetName')))]",
               "location": "global",
               "properties": {
@@ -1640,7 +1719,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
-              "apiVersion": "2024-01-01",
+              "apiVersion": "2024-07-01",
               "name": "[variables('pvtEndpointDnsGroupName')]",
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -1657,7 +1736,13 @@
                 "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
               ]
             }
-          ]
+          ],
+          "outputs": {
+            "fullyQualifiedDomainName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2024-12-01-preview').fullyQualifiedDomainName]"
+            }
+          }
         }
       },
       "dependsOn": [
@@ -1680,7 +1765,7 @@
             "value": "[variables('frontDoorName')]"
           },
           "applicationName": {
-            "value": "[parameters('applicationNamePrefix')]"
+            "value": "[parameters('applicationName')]"
           },
           "webAppName": {
             "value": "[variables('webAppName')]"
@@ -1695,8 +1780,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.30.23.60470",
-              "templateHash": "15930341172768835300"
+              "version": "0.37.4.10188",
+              "templateHash": "13008289827493158939"
             }
           },
           "parameters": {
@@ -1725,7 +1810,7 @@
             }
           },
           "variables": {
-            "frontDoorEndpointName": "[format('{0}-Endpoint', parameters('applicationName'))]",
+            "frontDoorEndpointName": "[parameters('applicationName')]",
             "frontDoorOriginGroupName": "[format('{0}-OriginGroup', parameters('applicationName'))]",
             "frontDoorOriginName": "[format('{0}-Origin', parameters('applicationName'))]",
             "frontDoorRouteName": "[format('{0}-Route', parameters('applicationName'))]"
@@ -1805,7 +1890,56 @@
                 ],
                 "forwardingProtocol": "HttpsOnly",
                 "linkToDefaultDomain": "Enabled",
-                "httpsRedirect": "Enabled"
+                "httpsRedirect": "Enabled",
+                "cacheConfiguration": {
+                  "compressionSettings": {
+                    "isCompressionEnabled": true,
+                    "contentTypesToCompress": [
+                      "application/eot",
+                      "application/font",
+                      "application/font-sfnt",
+                      "application/javascript",
+                      "application/json",
+                      "application/opentype",
+                      "application/otf",
+                      "application/pkcs7-mime",
+                      "application/truetype",
+                      "application/ttf",
+                      "application/vnd.ms-fontobject",
+                      "application/xhtml+xml",
+                      "application/xml",
+                      "application/xml+rss",
+                      "application/x-font-opentype",
+                      "application/x-font-truetype",
+                      "application/x-font-ttf",
+                      "application/x-httpd-cgi",
+                      "application/x-javascript",
+                      "application/x-mpegurl",
+                      "application/x-opentype",
+                      "application/x-otf",
+                      "application/x-perl",
+                      "application/x-ttf",
+                      "font/eot",
+                      "font/ttf",
+                      "font/otf",
+                      "font/opentype",
+                      "image/svg+xml",
+                      "text/css",
+                      "text/csv",
+                      "text/html",
+                      "text/javascript",
+                      "text/js",
+                      "text/plain",
+                      "text/richtext",
+                      "text/tab-separated-values",
+                      "text/xml",
+                      "text/x-script",
+                      "text/x-component",
+                      "text/x-java-source"
+                    ]
+                  },
+                  "queryStringCachingBehavior": "UseQueryString"
+                }
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), variables('frontDoorEndpointName'))]",
@@ -1891,7 +2025,7 @@
     },
     "endpointHostName": {
       "type": "string",
-      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value, reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value)]"
+      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value))]"
     }
   }
 }
