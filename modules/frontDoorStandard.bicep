@@ -18,7 +18,7 @@ var frontDoorOriginGroupName = '${applicationName}-OriginGroup'
 var frontDoorOriginName = '${applicationName}-Origin'
 var frontDoorRouteName = '${applicationName}-Route'
 
-resource frontDoorProfile 'Microsoft.Cdn/profiles@2024-02-01' = {
+resource frontDoorProfile 'Microsoft.Cdn/profiles@2025-09-01-preview' = {
   name: frontDoorProfileName
   location: 'global'
   sku: {
@@ -26,7 +26,7 @@ resource frontDoorProfile 'Microsoft.Cdn/profiles@2024-02-01' = {
   }
 }
 
-resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' = {
+resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2025-09-01-preview' = {
   name: frontDoorEndpointName
   parent: frontDoorProfile
   location: 'global'
@@ -35,7 +35,7 @@ resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' = {
   }
 }
 
-resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2024-02-01' = {
+resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2025-09-01-preview' = {
   name: frontDoorOriginGroupName
   parent: frontDoorProfile
   properties: {
@@ -56,7 +56,7 @@ resource existingWebApp 'Microsoft.Web/sites@2023-12-01' existing = {
   name: webAppName
 }
 
-resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01' = {
+resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2025-09-01-preview' = {
   name: frontDoorOriginName
   parent: frontDoorOriginGroup
   properties: {
@@ -69,7 +69,7 @@ resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01
   }
 }
 
-resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = {
+resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2025-09-01-preview' = {
   name: frontDoorRouteName
   parent: frontDoorEndpoint
   dependsOn: [
@@ -141,7 +141,7 @@ resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' 
   }
 }
 
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -173,7 +173,7 @@ resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-
   }
 }
 
-resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = {
+resource siteConfig 'Microsoft.Web/sites/config@2025-03-01' = {
   parent: existingWebApp
   name: 'web'
   properties: {

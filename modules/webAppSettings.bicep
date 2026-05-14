@@ -38,11 +38,11 @@ param containerMountPath string
 
 var containerImageReference = 'DOCKER|${ghostContainerImage}'
 
-resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
+resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' existing = {
   name: storageAccountName
 }
 
-resource existingWebApp 'Microsoft.Web/sites@2020-09-01' existing = {
+resource existingWebApp 'Microsoft.Web/sites@2025-03-01' existing = {
   name: webAppName
 }
 
@@ -50,11 +50,11 @@ resource existingApplicationInsights 'Microsoft.Insights/components@2020-02-02' 
   name: applicationInsightsName
 }
 
-resource existingMySQLServer 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' existing = {
+resource existingMySQLServer 'Microsoft.DBforMySQL/flexibleServers@2025-06-01-preview' existing = {
   name: mySQLServerName
 }
 
-resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = {
+resource siteConfig 'Microsoft.Web/sites/config@2025-03-01' = {
   parent: existingWebApp
   name: 'web'
   properties: {
@@ -77,7 +77,7 @@ resource siteConfig 'Microsoft.Web/sites/config@2023-12-01' = {
   }
 }
 
-resource appSettings 'Microsoft.Web/sites/config@2023-12-01' = {
+resource appSettings 'Microsoft.Web/sites/config@2025-03-01' = {
   parent: existingWebApp
   name: 'appsettings'
   properties: {

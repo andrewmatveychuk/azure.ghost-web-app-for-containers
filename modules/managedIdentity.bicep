@@ -8,7 +8,7 @@ param managedIdentityName string
 @description('Location to deploy the resources')
 param location string = resourceGroup().location
 
-resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2025-01-31-preview' = {
+resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2025-05-31-preview' = {
   name: managedIdentityName
   location: location
 }

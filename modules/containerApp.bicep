@@ -35,11 +35,11 @@ param containerProbes array
 
 param managedIdentityId string
 
-resource containerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-preview' existing = {
+resource containerEnvironment 'Microsoft.App/managedEnvironments@2026-01-01' existing = {
   name: containerAppEnvironmentName
 }
 
-resource containerApp 'Microsoft.App/containerApps@2025-02-02-preview' = {
+resource containerApp 'Microsoft.App/containerApps@2026-01-01' = {
   name: containerAppName
   location: location
   identity: {
