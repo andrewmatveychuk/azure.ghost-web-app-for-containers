@@ -40,6 +40,8 @@ You can deploy it as a Web App with public access or a Web App fronted by an Azu
 
 [![Deploy to Azure Web App for Containers](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fandrewmatveychuk%2Fazure.ghost-web-app-for-containers%2Fmaster%2Fghost-as-webapp.json)
 
+![Running Ghost on Azure App Service](ghost-on-azure-app-service.png)
+
 *Post-deployment steps: none.*
 
 Check for the `endpointHostName` deployment output value for the app URL. Depending on the deployment configuration (Web App with public access or with Azure Front Door), it will point to the Web App or to the Front Door profile public endpoint.
@@ -51,6 +53,8 @@ It takes some time for the Ghost container to be pulled/started and the applicat
 You can deploy it as a Container App with public access in a Container App Environment with public ingress enabled or a Container App in a locked-down [Container App Environment accessible only via the Azure Front Door (Premium) private link](https://learn.microsoft.com/en-us/azure/container-apps/how-to-integrate-with-azure-front-door). If deployed with the Azure Front Door private link, the Container App endpoint is inaccessible from the public network, which is good practice for production deployments.
 
 [![Deploy to Azure Container Apps](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fandrewmatveychuk%2Fazure.ghost-web-app-for-containers%2Fmaster%2Fghost-as-containerapp.json)
+
+![Running Ghost on Azure Container Apps](ghost-on-azure-container-apps.png)
 
 *Post-deployment steps:*
 
