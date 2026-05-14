@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.37.4.10188",
-      "templateHash": "17721449061908079179"
+      "version": "0.43.8.12551",
+      "templateHash": "17746081825764360399"
     }
   },
   "parameters": {
@@ -126,7 +126,7 @@
   "resources": [
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "vNetDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -156,8 +156,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "14389946328870371630"
+              "version": "0.43.8.12551",
+              "templateHash": "16829479259535011728"
             }
           },
           "parameters": {
@@ -186,7 +186,7 @@
           "resources": [
             {
               "type": "Microsoft.Network/virtualNetworks",
-              "apiVersion": "2024-07-01",
+              "apiVersion": "2025-05-01",
               "name": "[parameters('vNetName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -212,7 +212,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "logAnalyticsWorkspaceDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -236,8 +236,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "15338368156198984868"
+              "version": "0.43.8.12551",
+              "templateHash": "2899272602225600635"
             }
           },
           "parameters": {
@@ -269,7 +269,7 @@
           "resources": [
             {
               "type": "Microsoft.OperationalInsights/workspaces",
-              "apiVersion": "2025-02-01",
+              "apiVersion": "2025-07-01",
               "name": "[parameters('logAnalyticsWorkspaceName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -284,7 +284,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "storageAccountDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -329,8 +329,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "11995357983181777453"
+              "version": "0.43.8.12551",
+              "templateHash": "13729051071031870691"
             }
           },
           "parameters": {
@@ -420,7 +420,7 @@
           "resources": [
             {
               "type": "Microsoft.Storage/storageAccounts",
-              "apiVersion": "2025-01-01",
+              "apiVersion": "2025-08-01",
               "name": "[parameters('storageAccountName')]",
               "location": "[parameters('location')]",
               "kind": "[parameters('storageAccountKind')]",
@@ -436,7 +436,7 @@
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
               "name": "StorageAccountDiagnostics",
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
@@ -453,7 +453,7 @@
             },
             {
               "type": "Microsoft.Storage/storageAccounts/fileServices",
-              "apiVersion": "2025-01-01",
+              "apiVersion": "2025-08-01",
               "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
               "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
@@ -462,7 +462,7 @@
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Storage/storageAccounts/{0}/fileServices/{1}', parameters('storageAccountName'), 'default')]",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]",
               "name": "FileServicesDiagnostics",
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
@@ -493,7 +493,7 @@
             },
             {
               "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
-              "apiVersion": "2025-01-01",
+              "apiVersion": "2025-08-01",
               "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', parameters('fileShareFolderName'))]",
               "properties": "[parameters('fileShareProperties')]",
               "dependsOn": [
@@ -502,14 +502,14 @@
             },
             {
               "type": "Microsoft.Network/privateDnsZones",
-              "apiVersion": "2020-06-01",
+              "apiVersion": "2024-06-01",
               "name": "[variables('privateDnsZoneName')]",
               "location": "global",
               "properties": {}
             },
             {
               "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
-              "apiVersion": "2020-06-01",
+              "apiVersion": "2024-06-01",
               "name": "[format('{0}/{1}', variables('privateDnsZoneName'), format('{0}-link', parameters('vNetName')))]",
               "location": "global",
               "properties": {
@@ -524,7 +524,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2024-01-01",
+              "apiVersion": "2025-05-01",
               "name": "[parameters('privateEndpointName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -549,7 +549,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
-              "apiVersion": "2024-01-01",
+              "apiVersion": "2025-05-01",
               "name": "[variables('pvtEndpointDnsGroupName')]",
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -582,7 +582,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "keyVaultDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -612,10 +612,10 @@
             "value": "[variables('privateEndpointsSubnetName')]"
           },
           "principalId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.principalId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2025-04-01').outputs.principalId.value]"
           },
           "principalName": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.principalName.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2025-04-01').outputs.principalName.value]"
           },
           "applicationName": {
             "value": "[variables('webAppName')]"
@@ -627,8 +627,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "10512531244869550853"
+              "version": "0.43.8.12551",
+              "templateHash": "136048003797631086"
             }
           },
           "parameters": {
@@ -716,7 +716,7 @@
           "resources": [
             {
               "type": "Microsoft.KeyVault/vaults",
-              "apiVersion": "2024-12-01-preview",
+              "apiVersion": "2025-05-01",
               "name": "[parameters('keyVaultName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -735,7 +735,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
               "name": "[guid(variables('roleIdMapping')['Key Vault Secrets User'], parameters('principalName'), parameters('keyVaultName'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleIdMapping')['Key Vault Secrets User'])]",
@@ -748,7 +748,7 @@
             },
             {
               "type": "Microsoft.KeyVault/vaults/secrets",
-              "apiVersion": "2024-12-01-preview",
+              "apiVersion": "2025-05-01",
               "name": "[format('{0}/{1}', parameters('keyVaultName'), parameters('keyVaultSecretName'))]",
               "properties": {
                 "value": "[parameters('keyVaultSecretValue')]"
@@ -760,7 +760,7 @@
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
               "name": "KeyVaultDiagnostics",
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
@@ -809,7 +809,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2024-07-01",
+              "apiVersion": "2025-05-01",
               "name": "[variables('privateEndpointName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -834,7 +834,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
-              "apiVersion": "2024-07-01",
+              "apiVersion": "2025-05-01",
               "name": "[variables('pvtEndpointDnsGroupName')]",
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -855,7 +855,7 @@
           "outputs": {
             "secretUri": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), parameters('keyVaultSecretName')), '2024-12-01-preview').secretUri]"
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), parameters('keyVaultSecretName')), '2025-05-01').secretUri]"
             }
           }
         }
@@ -868,7 +868,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "webAppDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -904,8 +904,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "161171159291713123"
+              "version": "0.43.8.12551",
+              "templateHash": "5935718059686718130"
             }
           },
           "parameters": {
@@ -958,7 +958,7 @@
           "resources": [
             {
               "type": "Microsoft.Web/sites",
-              "apiVersion": "2024-11-01",
+              "apiVersion": "2025-03-01",
               "name": "[parameters('webAppName')]",
               "location": "[parameters('location')]",
               "kind": "app,linux,container",
@@ -975,7 +975,7 @@
             },
             {
               "type": "Microsoft.Network/virtualNetworks/subnets",
-              "apiVersion": "2024-07-01",
+              "apiVersion": "2025-05-01",
               "name": "[format('{0}/{1}', parameters('vNetName'), parameters('integrationSubnetName'))]",
               "properties": {
                 "addressPrefix": "[parameters('integrationSubnetPrefix')]",
@@ -991,7 +991,7 @@
             },
             {
               "type": "Microsoft.Web/sites/networkConfig",
-              "apiVersion": "2024-11-01",
+              "apiVersion": "2025-03-01",
               "name": "[format('{0}/{1}', parameters('webAppName'), 'virtualNetwork')]",
               "properties": {
                 "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('integrationSubnetName'))]"
@@ -1004,7 +1004,7 @@
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Web/sites/{0}', parameters('webAppName'))]",
+              "scope": "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]",
               "name": "WebAppDiagnostics",
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
@@ -1049,11 +1049,11 @@
           "outputs": {
             "hostName": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2024-11-01').hostNames[0]]"
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2025-03-01').hostNames[0]]"
             },
             "principalId": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2024-11-01', 'full').identity.principalId]"
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2025-03-01', 'full').identity.principalId]"
             },
             "principalName": {
               "type": "string",
@@ -1070,7 +1070,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "webAppSettingsDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1100,14 +1100,14 @@
             "value": "[variables('databaseLogin')]"
           },
           "databasePasswordSecretUri": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVaultDeploy'), '2022-09-01').outputs.secretUri.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVaultDeploy'), '2025-04-01').outputs.secretUri.value]"
           },
-          "siteUrl": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), createObject('value', format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value)), createObject('value', format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value)))]",
+          "siteUrl": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), createObject('value', format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2025-04-01').outputs.frontDoorEndpointHostName.value)), createObject('value', format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2025-04-01').outputs.hostName.value)))]",
           "applicationInsightsName": {
             "value": "[variables('applicationInsightsName')]"
           },
           "fileShareName": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy'), '2022-09-01').outputs.fileShareFullName.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storageAccountDeploy'), '2025-04-01').outputs.fileShareFullName.value]"
           },
           "storageAccountName": {
             "value": "[variables('storageAccountName')]"
@@ -1119,8 +1119,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "16262852731161086528"
+              "version": "0.43.8.12551",
+              "templateHash": "5010985091038306660"
             }
           },
           "parameters": {
@@ -1203,7 +1203,7 @@
           "resources": [
             {
               "type": "Microsoft.Web/sites/config",
-              "apiVersion": "2023-12-01",
+              "apiVersion": "2025-03-01",
               "name": "[format('{0}/{1}', parameters('webAppName'), 'web')]",
               "properties": {
                 "http20Enabled": true,
@@ -1219,14 +1219,14 @@
                     "accountName": "[parameters('storageAccountName')]",
                     "shareName": "[parameters('fileShareName')]",
                     "mountPath": "[parameters('containerMountPath')]",
-                    "accessKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').keys[0].value]"
+                    "accessKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2025-08-01').keys[0].value]"
                   }
                 }
               }
             },
             {
               "type": "Microsoft.Web/sites/config",
-              "apiVersion": "2023-12-01",
+              "apiVersion": "2025-03-01",
               "name": "[format('{0}/{1}', parameters('webAppName'), 'appsettings')]",
               "properties": {
                 "APPLICATIONINSIGHTS_CONNECTION_STRING": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString]",
@@ -1240,7 +1240,7 @@
                 "privacy_useUpdateCheck": "false",
                 "url": "[parameters('siteUrl')]",
                 "database__client": "mysql",
-                "database__connection__host": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2023-12-30').fullyQualifiedDomainName]",
+                "database__connection__host": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2025-06-01-preview').fullyQualifiedDomainName]",
                 "database__connection__user": "[parameters('databaseLogin')]",
                 "database__connection__password": "[format('@Microsoft.KeyVault(SecretUri={0})', parameters('databasePasswordSecretUri'))]",
                 "database__connection__database": "[parameters('databaseName')]",
@@ -1260,7 +1260,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "appServicePlanDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1287,8 +1287,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "16227728284110255997"
+              "version": "0.43.8.12551",
+              "templateHash": "7143537141368320067"
             }
           },
           "parameters": {
@@ -1334,7 +1334,7 @@
           "resources": [
             {
               "type": "Microsoft.Web/serverfarms",
-              "apiVersion": "2024-11-01",
+              "apiVersion": "2025-03-01",
               "name": "[parameters('appServicePlanName')]",
               "location": "[parameters('location')]",
               "kind": "linux",
@@ -1348,7 +1348,7 @@
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Web/serverfarms/{0}', parameters('appServicePlanName'))]",
+              "scope": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
               "name": "AppServicePlanDiagnostics",
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
@@ -1372,7 +1372,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "applicationInsightsDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1396,8 +1396,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "2308274308348777131"
+              "version": "0.43.8.12551",
+              "templateHash": "5515686401108450916"
             }
           },
           "parameters": {
@@ -1438,7 +1438,7 @@
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Insights/components/{0}', parameters('applicationInsightsName'))]",
+              "scope": "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
               "name": "InsightsDiagnostics",
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
@@ -1509,7 +1509,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "mySQLServerDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1551,8 +1551,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "7489417813795870732"
+              "version": "0.43.8.12551",
+              "templateHash": "3719358232130892737"
             }
           },
           "parameters": {
@@ -1625,7 +1625,7 @@
           "resources": [
             {
               "type": "Microsoft.DBforMySQL/flexibleServers",
-              "apiVersion": "2024-12-01-preview",
+              "apiVersion": "2025-06-01-preview",
               "name": "[parameters('mySQLServerName')]",
               "location": "[parameters('location')]",
               "sku": {
@@ -1645,7 +1645,7 @@
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.DBforMySQL/flexibleServers/{0}', parameters('mySQLServerName'))]",
+              "scope": "[resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName'))]",
               "name": "MySQLServerDiagnostics",
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
@@ -1672,7 +1672,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2024-07-01",
+              "apiVersion": "2025-05-01",
               "name": "[variables('privateEndpointName')]",
               "location": "[parameters('location')]",
               "properties": {
@@ -1719,7 +1719,7 @@
             },
             {
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
-              "apiVersion": "2024-07-01",
+              "apiVersion": "2025-05-01",
               "name": "[variables('pvtEndpointDnsGroupName')]",
               "properties": {
                 "privateDnsZoneConfigs": [
@@ -1740,7 +1740,7 @@
           "outputs": {
             "fullyQualifiedDomainName": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2024-12-01-preview').fullyQualifiedDomainName]"
+              "value": "[reference(resourceId('Microsoft.DBforMySQL/flexibleServers', parameters('mySQLServerName')), '2025-06-01-preview').fullyQualifiedDomainName]"
             }
           }
         }
@@ -1753,7 +1753,7 @@
     {
       "condition": "[equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
+      "apiVersion": "2025-04-01",
       "name": "FrontDoorDeploy",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1780,8 +1780,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "13008289827493158939"
+              "version": "0.43.8.12551",
+              "templateHash": "5371090625081974198"
             }
           },
           "parameters": {
@@ -1818,7 +1818,7 @@
           "resources": [
             {
               "type": "Microsoft.Cdn/profiles",
-              "apiVersion": "2024-02-01",
+              "apiVersion": "2025-09-01-preview",
               "name": "[parameters('frontDoorProfileName')]",
               "location": "global",
               "sku": {
@@ -1827,7 +1827,7 @@
             },
             {
               "type": "Microsoft.Cdn/profiles/afdEndpoints",
-              "apiVersion": "2024-02-01",
+              "apiVersion": "2025-09-01-preview",
               "name": "[format('{0}/{1}', parameters('frontDoorProfileName'), variables('frontDoorEndpointName'))]",
               "location": "global",
               "properties": {
@@ -1839,7 +1839,7 @@
             },
             {
               "type": "Microsoft.Cdn/profiles/originGroups",
-              "apiVersion": "2024-02-01",
+              "apiVersion": "2025-09-01-preview",
               "name": "[format('{0}/{1}', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'))]",
               "properties": {
                 "loadBalancingSettings": {
@@ -1859,7 +1859,7 @@
             },
             {
               "type": "Microsoft.Cdn/profiles/originGroups/origins",
-              "apiVersion": "2024-02-01",
+              "apiVersion": "2025-09-01-preview",
               "name": "[format('{0}/{1}/{2}', parameters('frontDoorProfileName'), variables('frontDoorOriginGroupName'), variables('frontDoorOriginName'))]",
               "properties": {
                 "hostName": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').defaultHostName]",
@@ -1875,7 +1875,7 @@
             },
             {
               "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
-              "apiVersion": "2024-02-01",
+              "apiVersion": "2025-09-01-preview",
               "name": "[format('{0}/{1}/{2}', parameters('frontDoorProfileName'), variables('frontDoorEndpointName'), variables('frontDoorRouteName'))]",
               "properties": {
                 "originGroup": {
@@ -1950,7 +1950,7 @@
             {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Cdn/profiles/{0}', parameters('frontDoorProfileName'))]",
+              "scope": "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName'))]",
               "name": "FrontDoorDiagnostics",
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
@@ -1981,7 +1981,7 @@
             },
             {
               "type": "Microsoft.Web/sites/config",
-              "apiVersion": "2023-12-01",
+              "apiVersion": "2025-03-01",
               "name": "[format('{0}/{1}', parameters('webAppName'), 'web')]",
               "properties": {
                 "ipSecurityRestrictions": [
@@ -1993,7 +1993,7 @@
                     "name": "Allow traffic from Front Door",
                     "headers": {
                       "x-azure-fdid": [
-                        "[reference(resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName')), '2024-02-01').frontDoorId]"
+                        "[reference(resourceId('Microsoft.Cdn/profiles', parameters('frontDoorProfileName')), '2025-09-01-preview').frontDoorId]"
                       ]
                     }
                   }
@@ -2007,7 +2007,7 @@
           "outputs": {
             "frontDoorEndpointHostName": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), variables('frontDoorEndpointName')), '2024-02-01').hostName]"
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), variables('frontDoorEndpointName')), '2025-09-01-preview').hostName]"
             }
           }
         }
@@ -2021,11 +2021,11 @@
   "outputs": {
     "webAppHostName": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2025-04-01').outputs.hostName.value]"
     },
     "endpointHostName": {
       "type": "string",
-      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2022-09-01').outputs.frontDoorEndpointHostName.value), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2022-09-01').outputs.hostName.value))]"
+      "value": "[if(equals(parameters('deploymentConfiguration'), 'Web app with Azure Front Door'), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'FrontDoorDeploy'), '2025-04-01').outputs.frontDoorEndpointHostName.value), format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'webAppDeploy'), '2025-04-01').outputs.hostName.value))]"
     }
   }
 }
