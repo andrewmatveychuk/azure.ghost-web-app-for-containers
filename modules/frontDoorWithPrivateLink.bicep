@@ -38,7 +38,7 @@ param wafManagedRuleSets array = [
 ]
 
 
-resource existingContainerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-preview' existing = {
+resource existingContainerEnvironment 'Microsoft.App/managedEnvironments@2026-01-01' existing = {
   name: containerAppEnvironmentName
 }
 
@@ -47,13 +47,13 @@ resource existingContainerEnvironment 'Microsoft.App/managedEnvironments@2025-02
 var frontDoorEndpointName = applicationName
 var frontDoorOriginGroupName = '${applicationName}-OriginGroup'
 var frontDoorOriginName = '${applicationName}-Origin'
-@description('A FQDN of the origin for Front Door')
+@description('An FQDN of the origin for Front Door')
 param frontDoorOriginHostName string
 var frontDoorRouteName = '${applicationName}-Route'
 @description('Name of Azure Front Door pricing tier.')
 param frontDoorSku string = 'Premium_AzureFrontDoor'
 
-resource frontDoorProfile 'Microsoft.Cdn/profiles@2025-06-01' = {
+resource frontDoorProfile 'Microsoft.Cdn/profiles@2025-09-01-preview' = {
   name: frontDoorProfileName
   location: 'global'
   sku: {
@@ -61,7 +61,7 @@ resource frontDoorProfile 'Microsoft.Cdn/profiles@2025-06-01' = {
   }
 }
 
-resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2025-06-01' = {
+resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2025-09-01-preview' = {
   name: frontDoorEndpointName
   parent: frontDoorProfile
   location: 'global'
@@ -70,7 +70,7 @@ resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2025-06-01' = {
   }
 }
 
-resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2025-06-01' = {
+resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2025-09-01-preview' = {
   name: frontDoorOriginGroupName
   parent: frontDoorProfile
   properties: {
@@ -88,7 +88,7 @@ resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2025-06-01' =
   }
 }
 
-resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01' = {
+resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2025-09-01-preview' = {
   name: frontDoorOriginName
   parent: frontDoorOriginGroup
   properties: {
@@ -111,7 +111,7 @@ resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01
   }
 }
 
-resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = {
+resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2025-09-01-preview' = {
   name: frontDoorRouteName
   parent: frontDoorEndpoint
   dependsOn: [
@@ -183,7 +183,7 @@ resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' 
   }
 }
 
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -216,7 +216,7 @@ resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-
 }
 
 // Configuring WAF and security policy association
-resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2025-03-01' = {
+resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2025-11-01' = {
   name: applicationName
   location: 'global'
   sku: {
@@ -234,7 +234,7 @@ resource wafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@20
   }
 }
 
-resource securityPolicy 'Microsoft.Cdn/profiles/securityPolicies@2025-06-01' =  {
+resource securityPolicy 'Microsoft.Cdn/profiles/securityPolicies@2025-09-01-preview' =  {
   name: applicationName
   parent: frontDoorProfile
   properties: {

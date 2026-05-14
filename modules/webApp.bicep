@@ -13,11 +13,11 @@ param appServicePlanName string
 @description('Log Analytics workspace to use for diagnostics settings')
 param logAnalyticsWorkspaceName string
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' existing = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2025-03-01' existing = {
   name: appServicePlanName
 }
 
-resource webApp 'Microsoft.Web/sites@2024-11-01' = {
+resource webApp 'Microsoft.Web/sites@2025-03-01' = {
   name: webAppName
   location: location
   kind: 'app,linux,container'
@@ -43,11 +43,11 @@ param integrationSubnetPrefix string
 
 var delegatedServiceName = 'Microsoft.Web/serverFarms'
 
-resource existingVNet 'Microsoft.Network/virtualNetworks@2024-07-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2025-05-01' existing = {
   name: vNetName
 }
 
-resource integrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' = {
+resource integrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2025-05-01' = {
   name: integrationSubnetName
   parent: existingVNet
   properties: {
@@ -63,7 +63,7 @@ resource integrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01
   }
 }
 
-resource webApp_VNetIntegration 'Microsoft.Web/sites/networkConfig@2024-11-01' = {
+resource webApp_VNetIntegration 'Microsoft.Web/sites/networkConfig@2025-03-01' = {
   parent: webApp
   name: 'virtualNetwork'
   properties: {
@@ -73,7 +73,7 @@ resource webApp_VNetIntegration 'Microsoft.Web/sites/networkConfig@2024-11-01' =
 //End of configuring virtual network integration
 
 // Configuring diagnostics settings for web app
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 

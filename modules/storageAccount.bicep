@@ -24,7 +24,7 @@ param logAnalyticsWorkspaceName string
 @description('Prefix to use when creating the resources in this deployment.')
 param applicationName string
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' = {
   name: storageAccountName
   location: location
   kind: storageAccountKind
@@ -39,7 +39,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
 }
 
 // Configuring diagnostics settings for Storage Account
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -59,7 +59,7 @@ resource storageAccountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-0
 // End of configuring diagnostics settings for Storage Account
 
 // Configuring file services and file share
-resource fileServices 'Microsoft.Storage/storageAccounts/fileServices@2025-01-01' = {
+resource fileServices 'Microsoft.Storage/storageAccounts/fileServices@2025-08-01' = {
   parent: storageAccount
   name: 'default'
 }
@@ -92,7 +92,7 @@ resource fileServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-
   }
 }
 
-resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2025-01-01' = {
+resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2025-08-01' = {
   parent: fileServices
   name: fileShareFolderName
   properties: fileShareProperties
@@ -110,22 +110,22 @@ param privateEndpointName string = '${applicationName}-pl-file-${uniqueString(re
 var privateDnsZoneName = 'privatelink.file.${environment().suffixes.storage}'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/file'
 
-resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2025-05-01' existing = {
   name: vNetName
 }
 
-resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' existing = {
+resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2025-05-01' existing = {
   name: privateEndpointsSubnetName
   parent: existingVNet
 }
 
-resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
   name: privateDnsZoneName
   location: 'global'
   properties: {}
 }
 
-resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
   parent: privateDnsZone
   name: '${existingVNet.name}-link'
   location: 'global'
@@ -137,7 +137,7 @@ resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDn
   }
 }
 
-resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2025-05-01' = {
   name: privateEndpointName
   location: location
   properties: {
@@ -158,7 +158,7 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
   }
 }
 
-resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = {
+resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2025-05-01' = {
   name: pvtEndpointDnsGroupName
   properties: {
     privateDnsZoneConfigs: [

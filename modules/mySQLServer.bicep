@@ -29,7 +29,7 @@ param logAnalyticsWorkspaceName string
 @description('Prefix to use when creating the resources in this deployment.')
 param applicationName string
 
-resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2024-12-01-preview' = {
+resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2025-06-01-preview' = {
   name: mySQLServerName
   location: location
   sku: {
@@ -50,7 +50,7 @@ resource mySQLServer 'Microsoft.DBforMySQL/flexibleServers@2024-12-01-preview' =
 output fullyQualifiedDomainName string = mySQLServer.properties.fullyQualifiedDomainName
 
 // Configuring diagnostics settings for MySQL Server
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -89,16 +89,16 @@ var privateEndpointName = '${applicationName}-pe-mysql-${uniqueString(resourceGr
 var privateDnsZoneName = 'privatelink.mysql.database.azure.com'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/mysql'
 
-resource existingVNet 'Microsoft.Network/virtualNetworks@2024-07-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2025-05-01' existing = {
   name: vNetName
 }
 
-resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' existing = {
+resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2025-05-01' existing = {
   name: privateEndpointsSubnetName
   parent: existingVNet
 }
 
-resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-07-01' = {
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2025-05-01' = {
   name: privateEndpointName
   location: location
   properties: {
@@ -137,7 +137,7 @@ resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDn
   }
 }
 
-resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-07-01' = {
+resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2025-05-01' = {
   name: pvtEndpointDnsGroupName
   properties: {
     privateDnsZoneConfigs: [

@@ -29,7 +29,7 @@ param principalId string
 @description('Prefix to use when creating the resources in this deployment.')
 param applicationName string
 
-resource keyVault 'Microsoft.KeyVault/vaults@2024-12-01-preview' = {
+resource keyVault 'Microsoft.KeyVault/vaults@2025-05-01' = {
   name: keyVaultName
   location: location
   properties: {
@@ -68,7 +68,7 @@ resource kvRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   }
 }
 
-resource secret 'Microsoft.KeyVault/vaults/secrets@2024-12-01-preview' = {
+resource secret 'Microsoft.KeyVault/vaults/secrets@2025-05-01' = {
   parent: keyVault
   name: keyVaultSecretName
   properties: {
@@ -77,7 +77,7 @@ resource secret 'Microsoft.KeyVault/vaults/secrets@2024-12-01-preview' = {
 }
 
 // Configuring diagnostics settings for Key Vault
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -116,11 +116,11 @@ var privateEndpointName = '${applicationName}-pe-kv-${uniqueString(resourceGroup
 var privateDnsZoneName = 'privatelink.vaultcore.azure.net'
 var pvtEndpointDnsGroupName = '${privateEndpointName}/keyvault'
 
-resource existingVNet 'Microsoft.Network/virtualNetworks@2024-07-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2025-05-01' existing = {
   name: vNetName
 }
 
-resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' existing = {
+resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2025-05-01' existing = {
   name: privateEndpointsSubnetName
   parent: existingVNet
 }
@@ -143,7 +143,7 @@ resource privateDnsZoneName_privateDnsZoneName_link 'Microsoft.Network/privateDn
   }
 }
 
-resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-07-01' = {
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2025-05-01' = {
   name: privateEndpointName
   location: location
   properties: {
@@ -164,7 +164,7 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-07-01' = {
   }
 }
 
-resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-07-01' = {
+resource pvtEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2025-05-01' = {
   name: pvtEndpointDnsGroupName
   properties: {
     privateDnsZoneConfigs: [

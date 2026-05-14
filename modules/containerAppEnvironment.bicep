@@ -25,7 +25,7 @@ param storageAccountName string
 @description('File share name on the storage account to store Ghost content files')
 param fileShareName string
 
-resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource existingWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -43,11 +43,11 @@ param subnetPrefix string
 
 var delegatedServiceName = 'Microsoft.App/environments'
 
-resource existingVNet 'Microsoft.Network/virtualNetworks@2024-01-01' existing = {
+resource existingVNet 'Microsoft.Network/virtualNetworks@2025-05-01' existing = {
   name: vNetName
 }
 
-resource containerEnvironmentSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' = {
+resource containerEnvironmentSubnet 'Microsoft.Network/virtualNetworks/subnets@2025-05-01' = {
   name: subnetName
   parent: existingVNet
   properties: {
@@ -63,7 +63,7 @@ resource containerEnvironmentSubnet 'Microsoft.Network/virtualNetworks/subnets@2
   }
 }
 
-resource containerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-preview' = {
+resource containerEnvironment 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: containerAppEnvironmentName
   location: location
   properties: {
@@ -74,15 +74,11 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-prev
         sharedKey: existingWorkspace.listKeys().primarySharedKey
       }
     }
-    appInsightsConfiguration: {
-      connectionString: existingApplicationInsights.properties.ConnectionString
-    }
     vnetConfiguration: {
       internal: internal
       infrastructureSubnetId: containerEnvironmentSubnet.id
     }
     zoneRedundant: true
-    // https://learn.microsoft.com/en-us/azure/container-apps/environment-type-consumption-only
     workloadProfiles: [
       {
         name: 'Consumption'
@@ -93,11 +89,11 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-prev
 }
 
 // Configuring storage for the Container App environment
-resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' existing = {
+resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' existing = {
   name: storageAccountName
 }
 
-resource environmentStorage 'Microsoft.App/managedEnvironments/storages@2025-02-02-preview' = {
+resource environmentStorage 'Microsoft.App/managedEnvironments/storages@2026-01-01' = {
   parent: containerEnvironment
   name: containerAppEnvironmentStorageName
   properties: {
